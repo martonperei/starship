@@ -338,7 +338,7 @@
         "home_symbol": "~",
         "read_only": "🔒",
         "read_only_style": "red",
-        "repo_root_format": "[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) ",
+        "repo_root_format": "[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$after_root_path]($after_repo_root_style)[$path]($style)[$read_only]($read_only_style) ",
         "repo_root_style": null,
         "style": "cyan bold",
         "substitutions": {},

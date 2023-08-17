@@ -37,7 +37,7 @@ impl<'a> Default for DirectoryConfig<'a> {
             use_logical_path: true,
             substitutions: IndexMap::new(),
             format: "[$path]($style)[$read_only]($read_only_style) ",
-            repo_root_format: "[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) ",
+            repo_root_format: "[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$after_root_path]($before_repo_root_style)[$path]($style)[$read_only]($read_only_style) ",
             style: "cyan bold",
             repo_root_style: None,
             before_repo_root_style: None,
