@@ -1,4 +1,6 @@
+use sha2::{Digest, Sha256};
 use std::borrow::Cow;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -14,21 +16,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     let mut module = context.new_module("direnv");
     let config = DirenvConfig::try_load(module.config);
 
-    let direnv_applies = !config.disabled
-        && context
-            .try_begin_scan()?
-            .set_extensions(&config.detect_extensions)
-            .set_files(&config.detect_files)
-            .set_folders(&config.detect_folders)
-            .is_match();
-
-    if !direnv_applies {
-        return None;
-    }
-
-    // the `--json` flag is silently ignored for direnv versions <2.33.0
-    let direnv_status = &context.exec_cmd("direnv", &["status", "--json"])?.stdout;
-    let state = match DirenvState::from_str(direnv_status) {
+    let state = match DirenvState::from_env(context) {
         Ok(s) => s,
         Err(e) => {
             log::warn!("{e}");
@@ -45,12 +33,16 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
             })
             .map(|variable| match variable {
                 "symbol" => Some(Ok(Cow::from(config.symbol))),
-                "rc_path" => Some(Ok(state.rc_path.to_string_lossy())),
-                "allowed" => Some(Ok(match state.allowed {
-                    AllowStatus::Allowed => Cow::from(config.allowed_msg),
-                    AllowStatus::NotAllowed => Cow::from(config.not_allowed_msg),
-                    AllowStatus::Denied => Cow::from(config.denied_msg),
-                })),
+                "rc_path" => state.rc_path.as_ref().map(|p| Ok(p.to_string_lossy())),
+                "allowed" => state
+                    .allowed
+                    .as_ref()
+                    .map(|a| match a {
+                        AllowStatus::Allowed => Cow::from(config.allowed_msg),
+                        AllowStatus::NotAllowed => Cow::from(config.not_allowed_msg),
+                        AllowStatus::Denied => Cow::from(config.denied_msg),
+                    })
+                    .map(Ok),
                 "loaded" => state
                     .loaded
                     .then_some(config.loaded_msg)
@@ -75,8 +67,8 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 }
 
 struct DirenvState {
-    pub rc_path: PathBuf,
-    pub allowed: AllowStatus,
+    pub rc_path: Option<PathBuf>,
+    pub allowed: Option<AllowStatus>,
     pub loaded: bool,
 }
 
@@ -86,8 +78,8 @@ impl FromStr for DirenvState {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match serde_json::from_str::<RawDirenvState>(s) {
             Ok(raw) => Ok(DirenvState {
-                rc_path: raw.state.found_rc.path,
-                allowed: raw.state.found_rc.allowed.try_into()?,
+                rc_path: Some(raw.state.found_rc.path),
+                allowed: Some(raw.state.found_rc.allowed.try_into()?),
                 loaded: matches!(
                     raw.state.loaded_rc.allowed.try_into()?,
                     AllowStatus::Allowed
@@ -99,14 +91,66 @@ impl FromStr for DirenvState {
 }
 
 impl DirenvState {
+    fn from_env(context: &Context) -> Result<Self, Cow<'static, str>> {
+        let mut rc_path = None;
+        let mut allowed = None;
+        let mut loaded = false;
+
+        // discover .envrc file
+        for path in context.current_dir.ancestors() {
+            let maybe_path = path.join(".envrc");
+            if Path::exists(Path::new(maybe_path.as_path())) {
+                rc_path = Some(maybe_path);
+                break;
+            }
+        }
+
+        if rc_path.is_some() {
+            let loaded_rc_path = context.get_env("DIRENV_FILE");
+
+            loaded = loaded_rc_path.is_some();
+
+            let file_name = rc_path.clone().unwrap();
+            let bytes = std::fs::read(file_name.clone()).unwrap();
+            let mut hasher = Sha256::new();
+
+            hasher.update(file_name.to_str().unwrap().as_bytes());
+            hasher.update("\n");
+            hasher.update(bytes);
+
+            let hash_bytes = hasher.finalize();
+
+            let path = Context::expand_tilde(
+                PathBuf::from_str(format!("~/.local/share/direnv/allow/{:x}", hash_bytes).as_str())
+                    .unwrap(),
+            );
+
+            if path.as_path().exists() {
+                allowed = Some(AllowStatus::Allowed);
+            } else {
+                allowed = Some(AllowStatus::NotAllowed);
+            }
+        }
+
+        if rc_path.is_none() || allowed.is_none() {
+            return Err(Cow::from("unknown direnv state"));
+        }
+
+        Ok(Self {
+            rc_path: rc_path,
+            allowed: allowed,
+            loaded,
+        })
+    }
+
     fn from_lines(s: &str) -> Result<Self, Cow<'static, str>> {
-        let mut rc_path = PathBuf::new();
+        let mut rc_path = None;
         let mut allowed = None;
         let mut loaded = true;
 
         for line in s.lines() {
             if let Some(path) = line.strip_prefix("Found RC path") {
-                rc_path = PathBuf::from_str(path.trim()).map_err(|e| Cow::from(e.to_string()))?
+                rc_path = Some(PathBuf::from(path.trim()));
             } else if let Some(value) = line.strip_prefix("Found RC allowed") {
                 allowed = Some(AllowStatus::from_str(value.trim())?);
             } else if line.contains("No .envrc or .env loaded") {
@@ -114,13 +158,13 @@ impl DirenvState {
             };
         }
 
-        if rc_path.as_os_str().is_empty() || allowed.is_none() {
+        if rc_path.is_none() || allowed.is_none() {
             return Err(Cow::from("unknown direnv state"));
         }
 
         Ok(Self {
             rc_path,
-            allowed: allowed.unwrap(),
+            allowed,
             loaded,
         })
     }
