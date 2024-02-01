@@ -112,23 +112,35 @@ impl DirenvState {
 
             let file_name = rc_path.clone().unwrap();
             let bytes = std::fs::read(file_name.clone()).unwrap();
-            let mut hasher = Sha256::new();
 
-            hasher.update(file_name.to_str().unwrap().as_bytes());
-            hasher.update("\n");
-            hasher.update(bytes);
+            let mut allow_hasher = Sha256::new();
+            allow_hasher.update(file_name.to_str().unwrap().as_bytes());
+            allow_hasher.update("\n");
+            allow_hasher.update(bytes);
+            let allow_hash = format!("{:x}", allow_hasher.finalize());
 
-            let hash_bytes = hasher.finalize();
+            let allow_file =
+                Context::expand_tilde(PathBuf::from_str("~/.local/share/direnv/allow").unwrap())
+                    .as_path()
+                    .join(allow_hash.as_str());
 
-            let path = Context::expand_tilde(
-                PathBuf::from_str(format!("~/.local/share/direnv/allow/{:x}", hash_bytes).as_str())
-                    .unwrap(),
-            );
-
-            if path.as_path().exists() {
+            if allow_file.as_path().exists() {
                 allowed = Some(AllowStatus::Allowed);
             } else {
-                allowed = Some(AllowStatus::NotAllowed);
+                let mut deny_hasher = Sha256::new();
+                deny_hasher.update(file_name.to_str().unwrap().as_bytes());
+                deny_hasher.update("\n");
+                let deny_hash = format!("{:x}", deny_hasher.finalize());
+
+                let deny_file =
+                    Context::expand_tilde(PathBuf::from_str("~/.local/share/direnv/deny").unwrap())
+                        .as_path()
+                        .join(deny_hash.as_str());
+                if deny_file.as_path().exists() {
+                    allowed = Some(AllowStatus::Denied);
+                } else {
+                    allowed = Some(AllowStatus::NotAllowed);
+                }
             }
         }
 
@@ -137,8 +149,8 @@ impl DirenvState {
         }
 
         Ok(Self {
-            rc_path: rc_path,
-            allowed: allowed,
+            rc_path,
+            allowed,
             loaded,
         })
     }
