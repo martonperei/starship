@@ -105,11 +105,11 @@ impl DirenvState {
             }
         }
 
+        let loaded_rc_path = context.get_env("DIRENV_FILE");
+        loaded = loaded_rc_path.is_some();
+        // TODO: handle where loaded_rc_path != rc_path
+
         if rc_path.is_some() {
-            let loaded_rc_path = context.get_env("DIRENV_FILE");
-
-            loaded = loaded_rc_path.is_some();
-
             let file_name = rc_path.clone().unwrap();
             let bytes = std::fs::read(file_name.clone()).unwrap();
 
@@ -142,10 +142,6 @@ impl DirenvState {
                     allowed = Some(AllowStatus::NotAllowed);
                 }
             }
-        }
-
-        if rc_path.is_none() || allowed.is_none() {
-            return Err(Cow::from("unknown direnv state"));
         }
 
         Ok(Self {
