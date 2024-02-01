@@ -25,6 +25,11 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
         }
     };
 
+    // TODO: handle loaded for both and when rc_path != loaded_rc_path
+    if state.rc_path.is_none() && state.loaded_rc_path.is_none() {
+        return None;
+    }
+
     let parsed = StringFormatter::new(config.format).and_then(|formatter| {
         formatter
             .map_style(|variable| match variable {
@@ -44,9 +49,9 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
                     })
                     .map(Ok),
                 "loaded" => state
-                    .loaded
-                    .then_some(config.loaded_msg)
-                    .or(Some(config.unloaded_msg))
+                    .loaded_rc_path
+                    .as_ref()
+                    .map_or_else(|| Some(config.unloaded_msg), |_f| Some(config.loaded_msg))
                     .map(Cow::from)
                     .map(Ok),
                 _ => None,
@@ -68,8 +73,9 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 
 struct DirenvState {
     pub rc_path: Option<PathBuf>,
+    pub loaded_rc_path: Option<PathBuf>,
     pub allowed: Option<AllowStatus>,
-    pub loaded: bool,
+    pub loaded_allowed: Option<AllowStatus>,
 }
 
 impl FromStr for DirenvState {
@@ -79,11 +85,9 @@ impl FromStr for DirenvState {
         match serde_json::from_str::<RawDirenvState>(s) {
             Ok(raw) => Ok(DirenvState {
                 rc_path: Some(raw.state.found_rc.path),
+                loaded_rc_path: Some(raw.state.loaded_rc.path),
                 allowed: Some(raw.state.found_rc.allowed.try_into()?),
-                loaded: matches!(
-                    raw.state.loaded_rc.allowed.try_into()?,
-                    AllowStatus::Allowed
-                ),
+                loaded_allowed: Some(raw.state.loaded_rc.allowed.try_into()?),
             }),
             Err(_) => DirenvState::from_lines(s),
         }
@@ -91,10 +95,45 @@ impl FromStr for DirenvState {
 }
 
 impl DirenvState {
+    fn is_rc_allowed(path: Option<&PathBuf>) -> Option<AllowStatus> {
+        if path.is_none() {
+            return None;
+        }
+
+        let file_name = path.clone().unwrap();
+        let bytes = std::fs::read(file_name.clone()).unwrap();
+
+        let mut allow_hasher = Sha256::new();
+        allow_hasher.update(file_name.to_str().unwrap().as_bytes());
+        allow_hasher.update("\n");
+        allow_hasher.update(bytes);
+        let allow_hash = format!("{:x}", allow_hasher.finalize());
+
+        let allow_file =
+            Context::expand_tilde(PathBuf::from_str("~/.local/share/direnv/allow").unwrap())
+                .as_path()
+                .join(allow_hash.as_str());
+
+        if allow_file.as_path().exists() {
+            return Some(AllowStatus::Allowed);
+        }
+        let mut deny_hasher = Sha256::new();
+        deny_hasher.update(file_name.to_str().unwrap().as_bytes());
+        deny_hasher.update("\n");
+        let deny_hash = format!("{:x}", deny_hasher.finalize());
+
+        let deny_file =
+            Context::expand_tilde(PathBuf::from_str("~/.local/share/direnv/deny").unwrap())
+                .as_path()
+                .join(deny_hash.as_str());
+        if deny_file.as_path().exists() {
+            return Some(AllowStatus::Denied);
+        }
+        return Some(AllowStatus::NotAllowed);
+    }
+
     fn from_env(context: &Context) -> Result<Self, Cow<'static, str>> {
         let mut rc_path = None;
-        let mut allowed = None;
-        let mut loaded = false;
 
         // discover .envrc file
         for path in context.current_dir.ancestors() {
@@ -105,65 +144,37 @@ impl DirenvState {
             }
         }
 
-        let loaded_rc_path = context.get_env("DIRENV_FILE");
-        loaded = loaded_rc_path.is_some();
-        // TODO: handle where loaded_rc_path != rc_path
+        let loaded_rc_path = context
+            .get_env("DIRENV_FILE")
+            .map(|e| PathBuf::from_str(e.as_str()).unwrap());
 
-        if rc_path.is_some() {
-            let file_name = rc_path.clone().unwrap();
-            let bytes = std::fs::read(file_name.clone()).unwrap();
-
-            let mut allow_hasher = Sha256::new();
-            allow_hasher.update(file_name.to_str().unwrap().as_bytes());
-            allow_hasher.update("\n");
-            allow_hasher.update(bytes);
-            let allow_hash = format!("{:x}", allow_hasher.finalize());
-
-            let allow_file =
-                Context::expand_tilde(PathBuf::from_str("~/.local/share/direnv/allow").unwrap())
-                    .as_path()
-                    .join(allow_hash.as_str());
-
-            if allow_file.as_path().exists() {
-                allowed = Some(AllowStatus::Allowed);
-            } else {
-                let mut deny_hasher = Sha256::new();
-                deny_hasher.update(file_name.to_str().unwrap().as_bytes());
-                deny_hasher.update("\n");
-                let deny_hash = format!("{:x}", deny_hasher.finalize());
-
-                let deny_file =
-                    Context::expand_tilde(PathBuf::from_str("~/.local/share/direnv/deny").unwrap())
-                        .as_path()
-                        .join(deny_hash.as_str());
-                if deny_file.as_path().exists() {
-                    allowed = Some(AllowStatus::Denied);
-                } else {
-                    allowed = Some(AllowStatus::NotAllowed);
-                }
-            }
-        }
+        let allowed = DirenvState::is_rc_allowed(rc_path.as_ref());
+        let loaded_allowed = DirenvState::is_rc_allowed(loaded_rc_path.as_ref());
 
         Ok(Self {
             rc_path,
+            loaded_rc_path,
             allowed,
-            loaded,
+            loaded_allowed,
         })
     }
 
     fn from_lines(s: &str) -> Result<Self, Cow<'static, str>> {
         let mut rc_path = None;
+        let mut loaded_rc_path = None;
         let mut allowed = None;
-        let mut loaded = true;
+        let mut loaded_allowed = None;
 
         for line in s.lines() {
             if let Some(path) = line.strip_prefix("Found RC path") {
                 rc_path = Some(PathBuf::from(path.trim()));
             } else if let Some(value) = line.strip_prefix("Found RC allowed") {
                 allowed = Some(AllowStatus::from_str(value.trim())?);
-            } else if line.contains("No .envrc or .env loaded") {
-                loaded = false;
-            };
+            } else if let Some(path) = line.strip_prefix("Loaded RC path") {
+                loaded_rc_path = Some(PathBuf::from(path.trim()));
+            } else if let Some(value) = line.strip_prefix("Loaded RC allowed") {
+                loaded_allowed = Some(AllowStatus::from_str(value.trim())?);
+            }
         }
 
         if rc_path.is_none() || allowed.is_none() {
@@ -172,8 +183,9 @@ impl DirenvState {
 
         Ok(Self {
             rc_path,
+            loaded_rc_path,
             allowed,
-            loaded,
+            loaded_allowed,
         })
     }
 }
