@@ -164,7 +164,7 @@ For example:
 
 #### Style Strings
 
-Most modules in starship allow you to configure their display styles. This is done with an entry (usually called `style`) which is a string specifying the configuration. Here are some examples of style strings along with what they do. For details on the full syntax, consult the [advanced config guide](/advanced-config/).
+Most modules in starship allow you to configure their display styles. This is done with an entry (usually called `style`) which is a string specifying the configuration. Here are some examples of style strings along with what they do. For details on the full syntax, consult the [advanced config guide](../advanced-config/).
 
 - `'fg:green bg:blue'` sets green text on a blue background
 - `'bg:blue fg:bright-green'` sets bright green text on a blue background
@@ -210,16 +210,16 @@ This is the list of prompt-wide configuration options.
 
 ### Options
 
-| Option            | Default                        | Description                                                                                                                                                                      |
-| ----------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `format`          | [link](#default-prompt-format) | Configure the format of the prompt.                                                                                                                                              |
-| `right_format`    | `''`                           | See [Enable Right Prompt](/advanced-config/#enable-right-prompt)                                                                                                                 |
-| `scan_timeout`    | `30`                           | Timeout for starship to scan files (in milliseconds).                                                                                                                            |
-| `command_timeout` | `500`                          | Timeout for commands executed by starship (in milliseconds).                                                                                                                     |
-| `add_newline`     | `true`                         | Inserts blank line between shell prompts.                                                                                                                                        |
-| `palette`         | `''`                           | Sets which color palette from `palettes` to use.                                                                                                                                 |
-| `palettes`        | `{}`                           | Collection of color palettes that assign [colors](/advanced-config/#style-strings) to user-defined names. Note that color palettes cannot reference their own color definitions. |
-| `follow_symlinks` | `true`                         | Follows symlinks to check if they're directories; used in modules such as git.                                                                                                   |
+| Option            | Default                        | Description                                                                                                                                                                        |
+| ----------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `format`          | [link](#default-prompt-format) | Configure the format of the prompt.                                                                                                                                                |
+| `right_format`    | `''`                           | See [Enable Right Prompt](../advanced-config/#enable-right-prompt)                                                                                                                 |
+| `scan_timeout`    | `30`                           | Timeout for starship to scan files (in milliseconds).                                                                                                                              |
+| `command_timeout` | `500`                          | Timeout for commands executed by starship (in milliseconds).                                                                                                                       |
+| `add_newline`     | `true`                         | Inserts blank line between shell prompts.                                                                                                                                          |
+| `palette`         | `''`                           | Sets which color palette from `palettes` to use.                                                                                                                                   |
+| `palettes`        | `{}`                           | Collection of color palettes that assign [colors](../advanced-config/#style-strings) to user-defined names. Note that color palettes cannot reference their own color definitions. |
+| `follow_symlinks` | `true`                         | Follows symlinks to check if they're directories; used in modules such as git.                                                                                                     |
 
 ::: tip
 
@@ -1980,7 +1980,7 @@ The following variables can be used in `format`:
 
 | Variable       | Description                                                                                                   |
 | -------------- | ------------------------------------------------------------------------------------------------------------- |
-| `all_status`   | Shortcut for`$conflicted$stashed$deleted$renamed$modified$staged$untracked`                                   |
+| `all_status`   | Shortcut for`$conflicted$stashed$deleted$renamed$modified$typechanged$staged$untracked`                       |
 | `ahead_behind` | Displays `diverged`, `ahead`, `behind` or `up_to_date` format string based on the current status of the repo. |
 | `conflicted`   | Displays `conflicted` when this branch has merge conflicts.                                                   |
 | `untracked`    | Displays `untracked` when there are untracked files in the working directory.                                 |
@@ -3508,7 +3508,7 @@ current [Python virtual environment](https://docs.python.org/tutorial/venv.html)
 If `pyenv_version_name` is set to `true`, it will display the pyenv version
 name. Otherwise, it will display the version number from `python --version`.
 
-By default the module will be shown if any of the following conditions are met:
+By default, the module will be shown if any of the following conditions are met:
 
 - The current directory contains a `.python-version` file
 - The current directory contains a `Pipfile` file
@@ -3588,17 +3588,6 @@ python_binary = 'python3'
 [python]
 # Don't trigger for files with the py extension
 detect_extensions = []
-```
-
-```toml
-# ~/.config/starship.toml
-
-[python]
-# Display the version of python from inside a local venv.
-#
-# Note this will only work when the venv is inside the project and it will only
-# work in the directory that contains the venv dir but maybe this is ok?
-python_binary = ['./venv/bin/python', 'python', 'python3', 'python2']
 ```
 
 ## R

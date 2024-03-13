@@ -158,7 +158,7 @@ line2
 
 #### Строки стиля
 
-В Starship, большинство модулей позволяют настроить стили отображения. Это делается записью (обычно называется `style`), которая представляет собой строку, определяющую конфигурацию. Ниже приведены несколько примеров стилей строк, а также, их действия. Подробнее о полном синтаксисе можно прочитать в [расширенном разделе конфигурации](/advanced-config/).
+В Starship, большинство модулей позволяют настроить стили отображения. Это делается записью (обычно называется `style`), которая представляет собой строку, определяющую конфигурацию. Ниже приведены несколько примеров стилей строк, а также, их действия. Подробнее о полном синтаксисе можно прочитать в [расширенном разделе конфигурации](../advanced-config/).
 
 - `'fg:green bg:blue'` sets green text on a blue background
 - `'bg:blue fg:bright-green'` sets bright green text on a blue background
@@ -200,12 +200,12 @@ detect_extensions = ['ts', '!video.ts', '!audio.ts']
 | Параметр          | По умолчанию                     | Описание                                                                                                                                                                         |
 | ----------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `format`          | [ссылка](#default-prompt-format) | Настройка форматирования оболочки.                                                                                                                                               |
-| `right_format`    | `''`                             | See [Enable Right Prompt](/advanced-config/#enable-right-prompt)                                                                                                                 |
+| `right_format`    | `''`                             | See [Enable Right Prompt](../advanced-config/#enable-right-prompt)                                                                                                                 |
 | `scan_timeout`    | `30`                             | Тайм-аут запуска сканирования файлов (в миллисекундах).                                                                                                                          |
 | `command_timeout` | `500`                            | Timeout for commands executed by starship (in milliseconds).                                                                                                                     |
 | `add_newline`     | `true`                           | Inserts blank line between shell prompts.                                                                                                                                        |
 | `palette`         | `''`                             | Sets which color palette from `palettes` to use.                                                                                                                                 |
-| `palettes`        | `{}`                             | Collection of color palettes that assign [colors](/advanced-config/#style-strings) to user-defined names. Note that color palettes cannot reference their own color definitions. |
+| `palettes`        | `{}`                             | Collection of color palettes that assign [colors](../advanced-config/#style-strings) to user-defined names. Note that color palettes cannot reference their own color definitions. |
 | `follow_symlinks` | `true`                           | Follows symlinks to check if they're directories; used in modules such as git.                                                                                                   |
 
 ::: tip
@@ -543,7 +543,7 @@ style = 'bold red'
 [[battery.display]] # 'bold yellow' style and 💦 symbol when capacity is between 10% and 30%
 threshold = 30
 style = 'bold yellow'
-discharging_symbol = '💦'
+discharging_symbol = '💦 '
 
 # when capacity is over 30%, the battery indicator will not be displayed
 ```
@@ -1165,6 +1165,7 @@ The `direnv` module shows the status of the current rc file if one is present. T
 | `detect_files`      | `['.envrc']`                           | Which filenames should trigger this module.           |
 | `detect_folders`    | `[]`                                   | Which folders should trigger this module.             |
 | `allowed_msg`       | `'allowed'`                            | The message displayed when an rc file is allowed.     |
+| `not_allowed_msg`   | `'not allowed'`                        | The message displayed when an rc file is not_allowed. |
 | `denied_msg`        | `'denied'`                             | The message displayed when an rc file is denied.      |
 | `loaded_msg`        | `'loaded'`                             | The message displayed when an rc file is loaded.      |
 | `unloaded_msg`      | `'not loaded'`                         | The message displayed when an rc file is not loaded.  |

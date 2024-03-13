@@ -158,7 +158,7 @@ Ví dụ:
 
 #### Các chuỗi kiểu
 
-Đa số các module trong starship cho phép bạn cấu hình kiểu hiển thị của chúng. This is done with an entry (thường được gọi là `kiểu`) cái là một cuỗi cấu hình đặc biệt. Đây là vài ví dụ của các chuỗi kiểu cũng với những gì chúng làm. Cú pháp chi tiết đầy đủ, tham khảo [hướng dẫn cấu hình nâng cao](/advanced-config/).
+Đa số các module trong starship cho phép bạn cấu hình kiểu hiển thị của chúng. This is done with an entry (thường được gọi là `kiểu`) cái là một cuỗi cấu hình đặc biệt. Đây là vài ví dụ của các chuỗi kiểu cũng với những gì chúng làm. Cú pháp chi tiết đầy đủ, tham khảo [hướng dẫn cấu hình nâng cao](../advanced-config/).
 
 - `'fg:green bg:blue'` sets green text on a blue background
 - `'bg:blue fg:bright-green'` sets bright green text on a blue background
@@ -200,12 +200,12 @@ Cái này là danh sách các tuỳ chọn cho cấu hình prompt-wide.
 | Tuỳ chọn          | Mặc định                       | Mô tả                                                                                                                                                                            |
 | ----------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `format`          | [link](#default-prompt-format) | Cấu hình định dạng của prompt.                                                                                                                                                   |
-| `right_format`    | `''`                           | See [Enable Right Prompt](/advanced-config/#enable-right-prompt)                                                                                                                 |
+| `right_format`    | `''`                           | See [Enable Right Prompt](../advanced-config/#enable-right-prompt)                                                                                                                 |
 | `scan_timeout`    | `30`                           | Timeout của starship cho việc quét các tập tin (tính theo milliseconds).                                                                                                         |
 | `command_timeout` | `500`                          | Timeout for commands executed by starship (in milliseconds).                                                                                                                     |
 | `add_newline`     | `true`                         | Chèn dòng trắng giữa các dấu nhắc lệnh.                                                                                                                                          |
 | `palette`         | `''`                           | Sets which color palette from `palettes` to use.                                                                                                                                 |
-| `palettes`        | `{}`                           | Collection of color palettes that assign [colors](/advanced-config/#style-strings) to user-defined names. Note that color palettes cannot reference their own color definitions. |
+| `palettes`        | `{}`                           | Collection of color palettes that assign [colors](../advanced-config/#style-strings) to user-defined names. Note that color palettes cannot reference their own color definitions. |
 | `follow_symlinks` | `true`                         | Follows symlinks to check if they're directories; used in modules such as git.                                                                                                   |
 
 ::: tip
@@ -543,7 +543,7 @@ style = 'bold red'
 [[battery.display]] # 'bold yellow' style and 💦 symbol when capacity is between 10% and 30%
 threshold = 30
 style = 'bold yellow'
-discharging_symbol = '💦'
+discharging_symbol = '💦 '
 
 # when capacity is over 30%, the battery indicator will not be displayed
 ```
@@ -1165,6 +1165,7 @@ The `direnv` module shows the status of the current rc file if one is present. T
 | `detect_files`      | `['.envrc']`                           | Những tên tệp nào sẽ kích hoạt mô-đun này.            |
 | `detect_folders`    | `[]`                                   | Những thư mục nào sẽ kích hoạt mô-đun này.            |
 | `allowed_msg`       | `'allowed'`                            | The message displayed when an rc file is allowed.     |
+| `not_allowed_msg`   | `'not allowed'`                        | The message displayed when an rc file is not_allowed. |
 | `denied_msg`        | `'denied'`                             | The message displayed when an rc file is denied.      |
 | `loaded_msg`        | `'loaded'`                             | The message displayed when an rc file is loaded.      |
 | `unloaded_msg`      | `'not loaded'`                         | The message displayed when an rc file is not loaded.  |

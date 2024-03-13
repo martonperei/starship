@@ -158,7 +158,7 @@ Per esempio:
 
 #### Stringhe di stile
 
-La maggior parte dei moduli in starship ti permettono di configurare i loro stili di visualizzazione. Questo viene fatto con una voce (solitamente chiamata `style`) che è una stringa che specifica la configurazione. Ecco alcuni esempi di stringhe di stile per quello che fanno. Per maggiori dettagli sulla sintassi completa, consulta la [guida di configurazione avanzata](/advanced-config/).
+La maggior parte dei moduli in starship ti permettono di configurare i loro stili di visualizzazione. Questo viene fatto con una voce (solitamente chiamata `style`) che è una stringa che specifica la configurazione. Ecco alcuni esempi di stringhe di stile per quello che fanno. Per maggiori dettagli sulla sintassi completa, consulta la [guida di configurazione avanzata](../advanced-config/).
 
 - `'fg:green bg:blue'` sets green text on a blue background
 - `'bg:blue fg:bright-green'` sets bright green text on a blue background
@@ -200,12 +200,12 @@ This is the list of prompt-wide configuration options.
 | Opzione           | Default                        | Descrizione                                                                                                                                                                      |
 | ----------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `format`          | [link](#default-prompt-format) | Configura il formato del prompt.                                                                                                                                                 |
-| `right_format`    | `''`                           | See [Enable Right Prompt](/advanced-config/#enable-right-prompt)                                                                                                                 |
+| `right_format`    | `''`                           | See [Enable Right Prompt](../advanced-config/#enable-right-prompt)                                                                                                                 |
 | `scan_timeout`    | `30`                           | Timeout per starship per scansionare i file (in millisecondi).                                                                                                                   |
 | `command_timeout` | `500`                          | Timeout per i comandi eseguiti da starship (in millisecondi).                                                                                                                    |
 | `add_newline`     | `true`                         | Inserisce una riga vuota tra i prompt della shell.                                                                                                                               |
 | `palette`         | `''`                           | Sets which color palette from `palettes` to use.                                                                                                                                 |
-| `palettes`        | `{}`                           | Collection of color palettes that assign [colors](/advanced-config/#style-strings) to user-defined names. Note that color palettes cannot reference their own color definitions. |
+| `palettes`        | `{}`                           | Collection of color palettes that assign [colors](../advanced-config/#style-strings) to user-defined names. Note that color palettes cannot reference their own color definitions. |
 | `follow_symlinks` | `true`                         | Follows symlinks to check if they're directories; used in modules such as git.                                                                                                   |
 
 ::: tip
@@ -543,7 +543,7 @@ style = 'bold red'
 [[battery.display]] # 'bold yellow' style and 💦 symbol when capacity is between 10% and 30%
 threshold = 30
 style = 'bold yellow'
-discharging_symbol = '💦'
+discharging_symbol = '💦 '
 
 # when capacity is over 30%, the battery indicator will not be displayed
 ```
@@ -1165,6 +1165,7 @@ The `direnv` module shows the status of the current rc file if one is present. T
 | `detect_files`      | `['.envrc']`                           | Quali nomi di file dovrebbero attivare questo modulo. |
 | `detect_folders`    | `[]`                                   | Quali cartelle dovrebbero attivare questo modulo.     |
 | `allowed_msg`       | `'allowed'`                            | The message displayed when an rc file is allowed.     |
+| `not_allowed_msg`   | `'not allowed'`                        | The message displayed when an rc file is not_allowed. |
 | `denied_msg`        | `'denied'`                             | The message displayed when an rc file is denied.      |
 | `loaded_msg`        | `'loaded'`                             | The message displayed when an rc file is loaded.      |
 | `unloaded_msg`      | `'not loaded'`                         | The message displayed when an rc file is not loaded.  |

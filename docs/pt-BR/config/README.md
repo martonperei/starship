@@ -106,7 +106,7 @@ format = '''
 
 \$'''
 
-# com string básica multilinha 
+# com string básica multilinha
 format = """
 
 \\$"""
@@ -158,7 +158,7 @@ Por exemplo:
 
 #### Estilo dos textos
 
-A maioria dos módulos no starship permite que você configure seus estilos de exibição. Isso é feito com uma entrada (normalmente chamada de `estilo`) que é uma string especificando a configuração. Aqui estão alguns exemplos de strings de estilo junto com o que elas fazem. Para obter detalhes sobre a sintaxe completa, consulte o [guia de configuração avançada](/advanced-config/).
+A maioria dos módulos no starship permite que você configure seus estilos de exibição. Isso é feito com uma entrada (normalmente chamada de `estilo`) que é uma string especificando a configuração. Aqui estão alguns exemplos de strings de estilo junto com o que elas fazem. Para obter detalhes sobre a sintaxe completa, consulte o [guia de configuração avançada](../advanced-config/).
 
 - `"fg:green bg:blue"` define o texto para verde e o fundo azul
 - `"bg:blue fg:bright-green"` define o texto para verde brilhante e o fundo azul
@@ -200,12 +200,12 @@ Esta é a lista de opções de configuração em todo o prompt.
 | Opções            | Padrão                         | Descrição                                                                                                                                                                                               |
 | ----------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `format`          | [link](#default-prompt-format) | Configura o formato do prompt.                                                                                                                                                                          |
-| `right_format`    | `''`                           | Veja [Ativa o prompt direito](/advanced-config/#enable-right-prompt)                                                                                                                                    |
+| `right_format`    | `''`                           | Veja [Ativa o prompt direito](../advanced-config/#enable-right-prompt)                                                                                                                                    |
 | `scan_timeout`    | `30`                           | Tempo limite para escanear arquivos (em milissegundos).                                                                                                                                                 |
 | `command_timeout` | `500`                          | Tempo limite de execução de comandos pelo starship (em milissegundos).                                                                                                                                  |
 | `add_newline`     | `true`                         | Insere linha vazia entre os prompts do shell.                                                                                                                                                           |
 | `palette`         | `''`                           | Define qual a paleta de cores de `palettes` será usada.                                                                                                                                                 |
-| `palettes`        | `{}`                           | Coleção de paletas de cores que atribuem [cores](/advanced-config/#style-strings) aos nomes definidos pelo usuário. Note que paletas de cores não podem referir-se a suas próprias definições de cores. |
+| `palettes`        | `{}`                           | Coleção de paletas de cores que atribuem [cores](../advanced-config/#style-strings) aos nomes definidos pelo usuário. Note que paletas de cores não podem referir-se a suas próprias definições de cores. |
 | `follow_symlinks` | `true`                         | Follows symlinks to check if they're directories; used in modules such as git.                                                                                                                          |
 
 ::: tip
@@ -536,16 +536,16 @@ A opção `display` é um array da seguinte tabela.
 #### Exemplo
 
 ```toml
-[[battery.display]] # ''bold red' e discharging_symbol é exibido quando a capacidade está entre 0% e 10%
+[[battery.display]] # 'bold red' style and discharging_symbol when capacity is between 0% and 10%
 threshold = 10
 style = 'bold red'
 
-[[battery.display]] # 'yellow' style e o símbolo 💦  é exibido quando a capacidade está entre 10% e 30%
+[[battery.display]] # 'bold yellow' style and 💦 symbol when capacity is between 10% and 30%
 threshold = 30
 style = 'bold yellow'
-discharging_symbol = '💦'
+discharging_symbol = '💦 '
 
-# quando a capacidade estiver acima de 30%, o indicador de bateria não será exibido
+# when capacity is over 30%, the battery indicator will not be displayed
 ```
 
 ## Buf
@@ -1165,6 +1165,7 @@ The `direnv` module shows the status of the current rc file if one is present. T
 | `detect_files`      | `['.envrc']`                           | Quais nomes de arquivos devem ativar este módulo.     |
 | `detect_folders`    | `[]`                                   | Quais pastas devem ativar este módulo.                |
 | `allowed_msg`       | `'allowed'`                            | The message displayed when an rc file is allowed.     |
+| `not_allowed_msg`   | `'not allowed'`                        | The message displayed when an rc file is not_allowed. |
 | `denied_msg`        | `'denied'`                             | The message displayed when an rc file is denied.      |
 | `loaded_msg`        | `'loaded'`                             | The message displayed when an rc file is loaded.      |
 | `unloaded_msg`      | `'not loaded'`                         | The message displayed when an rc file is not loaded.  |

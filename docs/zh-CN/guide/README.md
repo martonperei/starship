@@ -40,11 +40,11 @@
 </p>
 
 <p align="center">
-  <a href="https://starship.rs">网站</a>
+  <a href="https://starship.rs/zh-CN">网站</a>
   ·
   <a href="#🚀-installation">安装</a>
   ·
-  <a href="https://starship.rs/config/">配置</a>
+  <a href="https://starship.rs/zh-CN/config/">配置</a>
 </p>
 
 <p align="center">
@@ -161,17 +161,17 @@
   align="right"
  />
 
-**轻量、迅速、可无限定制的高颜值终端！**
+**轻量、迅速、客制化的高颜值终端！**
 
 - **快：** 很快 —— 真的真的非常快！ 🚀
-- **定制化：** 可定制各种各样的提示符。
+- **客制化：** 可定制各种各样的提示符。
 - **通用：** 适用于任何 Shell、任何操作系统。
 - **智能：** 一目了然地显示相关信息。
 - **功能丰富：** 支持所有你喜欢的工具。
 - **易用：** 安装快速 —— 几分钟就可上手。
 
 <p align="center">
-<a href="https://starship.rs/config/"><strong>探索 Starship 文档</strong></a>
+<a href="https://starship.rs/zh-CN/config/"><strong>探索 Starship 文档</strong></a>
 </p>
 
 <a name="🚀-installation"></a>
@@ -227,7 +227,7 @@ curl -sS https://starship.rs/install.sh | sh
 | _任意发行版_            | [conda-forge](https://anaconda.org/conda-forge/starship)                                        | `conda install -c conda-forge starship`                                        |
 | _任意发行版_            | [Linuxbrew](https://formulae.brew.sh/formula/starship)                                          | `brew install starship`                                                        |
 | Alpine Linux 3.13+ | [Alpine Linux Packages](https://pkgs.alpinelinux.org/packages?name=starship)                    | `apk add starship`                                                             |
-| Arch Linux         | [Arch Linux 额外](https://archlinux.org/packages/extra/x86_64/starship)                           | `pacman -S starship`                                                           |
+| Arch Linux         | [Arch Linux extra](https://archlinux.org/packages/extra/x86_64/starship)                        | `pacman -S starship`                                                           |
 | CentOS 7+          | [Copr](https://copr.fedorainfracloud.org/coprs/atim/starship)                                   | `dnf copr enable atim/starship` <br /> `dnf install starship` |
 | Gentoo             | [Gentoo Packages](https://packages.gentoo.org/packages/app-shells/starship)                     | `emerge app-shells/starship`                                                   |
 | Manjaro            |                                                                                                 | `pacman -S starship`                                                           |
@@ -348,7 +348,7 @@ starship init nu | save -f ~/.cache/starship/init.nu
 然后在您的 Nushell 配置文件的最后（使用 `$nu.config-path` 来获取它的路径），添加以下内容：
 
 ```sh
-使用 ~/.cache/starship/init.nu
+use ~/.cache/starship/init.nu
 ```
 
 注意：仅支持 Nushell v0.78+
@@ -411,7 +411,7 @@ eval "$(starship init zsh)"
 
 ## 🤝 贡献
 
-我们欢迎  **任何水平** 的参与者！ 如果想练手，可以试着解决某个标记为  [good first issue](https://github.com/starship/starship/labels/🌱%20good%20first%20issue) 的议题。
+我们欢迎  **任何水平** 的参与者！ 如果想练手，可以试着解决某个标记为  [good first issue](https://github.com/starship/starship/labels/🌱%20good%20first%20issue) 的 Issue。
 
 如果你精通非英语语言，请协助我们翻译并更新文档，非常感谢！ 你可以在 [Starship Crowdin](https://translate.starship.rs/) 上参与翻译。
 
@@ -419,7 +419,7 @@ eval "$(starship init zsh)"
 
 ## 💭 该项目受以下项目启发
 
-请看看这些之前的项目，他们启发了 Starship 项目。 🙏
+请查看这些曾经启发了 Starship 的项目。 🙏
 
 - **[denysdovhan/spaceship-prompt](https://github.com/denysdovhan/spaceship-prompt)** – 为宇航员准备的 ZSH 提示符。
 
