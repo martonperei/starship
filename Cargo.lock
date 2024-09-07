@@ -440,7 +440,7 @@ dependencies = [
  "anstream",
  "anstyle",
  "clap_lex",
- "strsim 0.10.0",
+ "strsim",
  "unicase",
  "unicode-width",
 ]
@@ -1624,7 +1624,7 @@ dependencies = [
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "windows-core 0.52.0",
+ "windows-core 0.51.1",
 ]
 
 [[package]]
@@ -2885,7 +2885,7 @@ dependencies = [
  "shadow-rs",
  "shell-words",
  "starship-battery",
- "strsim 0.11.0",
+ "strsim",
  "systemstat",
  "tempfile",
  "terminal_size",
@@ -3174,7 +3174,7 @@ checksum = "1b5bb770da30e5cbfde35a2d7b9b8a2c4b8ef89548a7a6aeab5c9a576e3e7421"
 dependencies = [
  "indexmap 2.2.5",
  "toml_datetime",
- "winnow 0.5.31",
+ "winnow 0.5.39",
 ]
 
 [[package]]
@@ -3800,7 +3800,7 @@ checksum = "9ce1b18ccd8e73a9321186f97e46f9f04b778851177567b1975109d26a08d2a6"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.46",
+ "syn 2.0.48",
 ]
 
 [[package]]
