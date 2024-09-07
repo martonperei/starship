@@ -2,20 +2,21 @@
 layout: home
 hero:
   image: /logo.svg
-  text: null
+  text:
   tagline: Il prompt minimalista, super veloce e infinitamente personalizzabile per qualsiasi shell!
   actions:
-    - theme: brand
+    - 
+      theme: brand
       text: Inizia →
       link: ./guide/
 features:
-  -
+  - 
     title: Prima la compatibilità
     details: Funziona sulle shell e sui sistemi operativi più comuni. Usalo ovunque!
-  -
+  - 
     title: Scritto in Rust
     details: Sfrutta la velocità e sicurezza di Rust, per rendere il tuo prompt il più veloce e il più affidabile.
-  -
+  - 
     title: Personalizzabile
     details: Ogni più piccolo dettaglio è personalizzabile a piacere, per rendere questo prompt minimalista o ricco di tutte le funzionalità che desideri.
 footer: Licenza ISC | Copyright © 2019-present Starship Collaboratori
@@ -24,12 +25,24 @@ metaTitle: "Starship: Cross-Shell Prompt"
 description: Starship è il prompt minimalista, super veloce ed estremamente personalizzabile per qualsiasi shell! Mostra le informazioni di cui hai bisogno, rimanendo elegante e minimale. Quick installation available for Bash, Fish, ZSH, Ion, Tcsh, Elvish, Nu, Xonsh, Cmd, and PowerShell.
 ---
 
-<div class="center">
-  <video class="demo-video" muted autoplay loop playsinline>
-    <source src="/demo.webm" type="video/webm">
-    <source src="/demo.mp4" type="video/mp4">
-  </video>
-</div>
+<script setup>
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.has('uwu') || urlParams.has('kawaii')) {
+    const img = document.querySelector('.VPHero .VPImage.image-src')
+    img.classList.add('uwu')
+    img.src = '/logo-uwu.png'
+    img.alt = 'Kawaii Starship Logo by @sawaratsuki1004'
+  }
+})
+</script>
+
+<video class="demo-video" muted autoplay loop playsinline>
+  <source src="/demo.webm" type="video/webm">
+  <source src="/demo.mp4" type="video/mp4">
+</video>
 
 ### Prerequisiti
 
@@ -58,6 +71,7 @@ description: Starship è il prompt minimalista, super veloce ed estremamente per
    ```sh
    brew install starship
    ```
+
    With [Winget](https://github.com/microsoft/winget-cli):
 
    ```powershell
@@ -157,6 +171,7 @@ description: Starship è il prompt minimalista, super veloce ed estremamente per
    :::
 
    Add the following to the end of your Nushell env file (find it by running `$nu.env-path` in Nushell):
+
    ```sh
    mkdir ~/.cache/starship
    starship init nu | save -f ~/.cache/starship/init.nu

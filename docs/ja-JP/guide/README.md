@@ -35,16 +35,16 @@
   <a href="https://stand-with-ukraine.pp.ua"
     ><img
       src="https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraineFlat.svg"
-      alt="Stand With Ukraine"
+      alt="ウクライナと共に歩む"
  /></a>
 </p>
 
 <p align="center">
-  <a href="https://starship.rs/ja-JP">ウェブサイト</a>
+  <a href="https://starship.rs">ウェブサイト</a>
   ·
   <a href="#🚀-installation">インストール</a>
   ·
-  <a href="https://starship.rs/ja-JP/config/">設定</a>
+  <a href="https://starship.rs/config/">設定</a>
 </p>
 
 <p align="center">
@@ -161,7 +161,7 @@
   align="right"
  />
 
-**シェル用の最小限の、非常に高速で、無限にカスタマイズ可能なプロンプトです！**
+**最小限の、非常に高速で、無限にカスタマイズ可能なシェル用のプロンプトです！**
 
 - **高速:** _本当に_ 高速です！ 🚀
 - **カスタマイズ可能:** プロンプトのあらゆる側面を構成します。
@@ -171,7 +171,7 @@
 - **簡単:** 迅速なインストールが可能であり、数分で使用開始可能です。
 
 <p align="center">
-<a href="https://starship.rs/ja-JP/config/"><strong>Starshipのドキュメントを見る&nbsp;&nbsp;▶</strong></a>
+<a href="https://starship.rs/config/"><strong>Starshipのドキュメントを見る&nbsp;&nbsp;▶</strong></a>
 </p>
 
 <a name="🚀-installation"></a>
@@ -431,9 +431,7 @@ Starshipのさらなるカスタマイズを目指すなら以下を参考にし
 
 [スポンサーになることで](https://github.com/sponsors/starship)このプロジェクトをサポートできます。 名前やロゴがあなたのホームページへのリンクとともに表示されます。
 
-**スポンサーティア**
-
-- [Appwrite](https://appwrite.io/)
+- Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org)
 
 <p align="center">
     <br>

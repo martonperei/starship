@@ -72,7 +72,7 @@ Starship 会执行数个不同的命令来获取应该显示的信息，例如�
 env STARSHIP_LOG=trace starship module rust
 ```
 
-若 Starship 运行缓慢，您可以使用 `timings` 命令查看运行缓慢的组件或命令。
+If starship is being slow you can try using the `timings` command to see if there is a particular module or command that is to blame.
 
 ```sh
 env STARSHIP_LOG=trace starship timings
@@ -123,7 +123,7 @@ sh -c 'rm "$(command -v 'starship')"'
 
 ## 我如何在没有 `sudo` 的情况下安装 Starship？
 
-Shell 安装脚本(`https://starship.rs/install`) 只尝试使用 `sudo`当安装目录不可被当前用户写入 默认安装目录是环境变量 `$BIN_DIR` 的值或者 `/usr/loca/bin` 如果 if `$BIN_DIR` 未设置 如果你使用一个用户可写的安装目录替代, 你应该可以不使用 `sudo` 安装 Starship 例如, `curl -sS https://starship.rs/install.sh | sh -s -- -b ~/.local/bin` 使用 `-b` 选项设置安装目录到 `~/.local/bin`
+Shell 安装脚本(`https://starship.rs/install`) 只尝试使用 `sudo`当安装目录不可被当前用户写入 The default installation directory is the value of the `$BIN_DIR` environment variable or `/usr/local/bin` if `$BIN_DIR` is not set. 如果你使用一个用户可写的安装目录替代, 你应该可以不使用 `sudo` 安装 Starship 例如, `curl -sS https://starship.rs/install.sh | sh -s -- -b ~/.local/bin` 使用 `-b` 选项设置安装目录到 `~/.local/bin`
 
 对于非交互 Starship 安装, 请添加 `-y` 以跳过确认 查看安装脚本源码以获取所有支持的选项
 
