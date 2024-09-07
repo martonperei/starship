@@ -113,7 +113,6 @@ pub const PROMPT_ORDER: &[&str] = &[
     "openstack",
     "azure",
     "direnv",
-    "fishenv",
     "env_var",
     "crystal",
     "custom",
