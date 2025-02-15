@@ -1,9 +1,17 @@
 use super::{Context, Module};
-use std::ffi::OsString;
 
 use crate::config::ModuleConfig;
 use crate::configs::hostname::HostnameConfig;
 use crate::formatter::StringFormatter;
+
+#[cfg(not(windows))]
+use whoami::fallible::hostname;
+// On Windows, whoami::hostname() returns the NetBIOS name,
+// but we prefer the "hostname" returned by whoami::devicname()
+// which does a better job of preserving case and returns the
+// DNS name.
+#[cfg(windows)]
+use whoami::fallible::devicename as hostname;
 
 /// Creates a module with the system hostname
 ///
@@ -23,15 +31,9 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
         return None;
     }
 
-    let os_hostname: OsString = gethostname::gethostname();
-
-    let host = match os_hostname.into_string() {
-        Ok(host) => host,
-        Err(bad) => {
-            log::warn!("hostname is not valid UTF!\n{:?}", bad);
-            return None;
-        }
-    };
+    let host = hostname()
+        .inspect_err(|e| log::warn!("Failed to get hostname: {e}"))
+        .ok()?;
 
     //rustc doesn't let you do an "if" and an "if let" in the same if statement
     // if this changes in the future this can become a lot cleaner
@@ -85,13 +87,14 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 
 #[cfg(test)]
 mod tests {
+    use super::hostname;
     use crate::test::ModuleRenderer;
     use nu_ansi_term::{Color, Style};
     use unicode_segmentation::UnicodeSegmentation;
 
     macro_rules! get_hostname {
         () => {
-            if let Ok(hostname) = gethostname::gethostname().into_string() {
+            if let Ok(hostname) = hostname() {
                 hostname
             } else {
                 println!(
@@ -275,10 +278,7 @@ mod tests {
         toml_config["hostname"]["aliases"]
             .as_table_mut()
             .unwrap()
-            .insert(
-                hostname.clone(),
-                toml::Value::String("homeworld".to_string()),
-            );
+            .insert(hostname, toml::Value::String("homeworld".to_string()));
         let actual = ModuleRenderer::new("hostname")
             .config(toml_config)
             .collect();

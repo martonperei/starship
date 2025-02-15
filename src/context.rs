@@ -12,7 +12,6 @@ use gix::{
     sec::{self as git_sec, trust::DefaultForLevel},
     state as git_state, Repository, ThreadSafeRepository,
 };
-use once_cell::sync::OnceCell;
 #[cfg(test)]
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -25,6 +24,7 @@ use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::String;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use terminal_size::terminal_size;
 
@@ -44,13 +44,13 @@ pub struct Context<'a> {
     pub logical_dir: PathBuf,
 
     /// A struct containing directory contents in a lookup-optimized format.
-    dir_contents: OnceCell<DirContents>,
+    dir_contents: OnceLock<Result<DirContents, std::io::Error>>,
 
     /// Properties to provide to modules.
     pub properties: Properties,
 
     /// Private field to store Git information for modules who need it
-    repo: OnceCell<Repo>,
+    repo: OnceLock<Result<Repo, Box<gix::discover::Error>>>,
 
     /// The shell the user is assumed to be running
     pub shell: Shell,
@@ -134,7 +134,7 @@ impl<'a> Context<'a> {
         if properties
             .pipestatus
             .as_deref()
-            .map_or(false, |p| p.len() == 1 && p[0].is_empty())
+            .is_some_and(|p| p.len() == 1 && p[0].is_empty())
         {
             properties.pipestatus = None;
         }
@@ -166,8 +166,8 @@ impl<'a> Context<'a> {
             properties,
             current_dir,
             logical_dir,
-            dir_contents: OnceCell::new(),
-            repo: OnceCell::new(),
+            dir_contents: OnceLock::new(),
+            repo: OnceLock::new(),
             shell,
             target,
             width,
@@ -286,9 +286,9 @@ impl<'a> Context<'a> {
     }
 
     /// Will lazily get repo root and branch when a module requests it.
-    pub fn get_repo(&self) -> Result<&Repo, Box<gix::discover::Error>> {
+    pub fn get_repo(&self) -> Result<&Repo, &gix::discover::Error> {
         self.repo
-            .get_or_try_init(|| -> Result<Repo, Box<gix::discover::Error>> {
+            .get_or_init(|| -> Result<Repo, Box<gix::discover::Error>> {
                 // custom open options
                 let mut git_open_opts_map =
                     git_sec::trust::Mapping::<gix::open::Options>::default();
@@ -359,17 +359,21 @@ impl<'a> Context<'a> {
                     kind: repository.kind(),
                 })
             })
+            .as_ref()
+            .map_err(std::convert::AsRef::as_ref)
     }
 
-    pub fn dir_contents(&self) -> Result<&DirContents, std::io::Error> {
-        self.dir_contents.get_or_try_init(|| {
-            let timeout = self.root_config.scan_timeout;
-            DirContents::from_path_with_timeout(
-                &self.current_dir,
-                Duration::from_millis(timeout),
-                self.root_config.follow_symlinks,
-            )
-        })
+    pub fn dir_contents(&self) -> Result<&DirContents, &std::io::Error> {
+        self.dir_contents
+            .get_or_init(|| {
+                let timeout = self.root_config.scan_timeout;
+                DirContents::from_path_with_timeout(
+                    &self.current_dir,
+                    Duration::from_millis(timeout),
+                    self.root_config.follow_symlinks,
+                )
+            })
+            .as_ref()
     }
 
     fn get_shell() -> Shell {
@@ -776,19 +780,53 @@ impl<'a> ScanAncestors<'a> {
     /// files or folders is found.
     ///
     /// The scan does not cross device boundaries.
-    pub fn scan(&self) -> Option<&'a Path> {
-        let initial_device_id = self.path.device_id();
-        for dir in self.path.ancestors() {
-            if initial_device_id != dir.device_id() {
+    pub fn scan(&self) -> Option<PathBuf> {
+        let path = self.path;
+        let initial_device_id = path.device_id();
+
+        // We want to avoid reallocations during the search so we pre-allocate a buffer with enough
+        // capacity to hold the longest path + any marker (we could find the length of the longest
+        // marker programmatically but that would actually cost more than preallocating a few bytes too many).
+        let mut buf = PathBuf::with_capacity(path.as_os_str().len() + 15);
+        path.clone_into(&mut buf);
+
+        loop {
+            if initial_device_id != buf.device_id() {
                 break;
             }
 
-            if self.files.iter().any(|name| dir.join(name).is_file())
-                || self.folders.iter().any(|name| dir.join(name).is_dir())
-            {
-                return Some(dir);
+            for file in self.files {
+                // Then for each file, we look for `buf/file`
+                buf.push(file);
+
+                if buf.is_file() {
+                    buf.pop();
+                    return Some(buf);
+                }
+
+                // Removing the last pushed item means removing `file`, to replace it with either
+                // the next `file` or the first `folder`, if any
+                buf.pop();
+            }
+
+            for folder in self.folders {
+                // Then for each folder, we look for `buf/folder`
+                buf.push(folder);
+
+                if buf.is_dir() {
+                    buf.pop();
+                    return Some(buf);
+                }
+
+                buf.pop();
+            }
+
+            // Then we go up one level until there is no more level to go up with
+            if !buf.pop() {
+                break;
             }
         }
+
         None
     }
 }
@@ -864,8 +902,11 @@ pub struct Properties {
     #[clap(short = 'k', long, default_value = "viins")]
     pub keymap: String,
     /// The number of currently running jobs
-    #[clap(short, long, default_value_t, value_parser=parse_jobs)]
+    #[clap(short, long, default_value_t, value_parser=parse_i64)]
     pub jobs: i64,
+    /// The current value of SHLVL, for shells that mis-handle it in $()
+    #[clap(long, value_parser=parse_i64)]
+    pub shlvl: Option<i64>,
 }
 
 impl Default for Properties {
@@ -879,6 +920,7 @@ impl Default for Properties {
             cmd_duration: None,
             keymap: "viins".to_string(),
             jobs: 0,
+            shlvl: None,
         }
     }
 }
@@ -892,8 +934,8 @@ fn parse_trim<F: FromStr>(value: &str) -> Option<Result<F, F::Err>> {
     Some(F::from_str(value))
 }
 
-fn parse_jobs(jobs: &str) -> Result<i64, ParseIntError> {
-    parse_trim(jobs).unwrap_or(Ok(0))
+fn parse_i64(value: &str) -> Result<i64, ParseIntError> {
+    parse_trim(value).unwrap_or(Ok(0))
 }
 
 fn default_width() -> usize {
