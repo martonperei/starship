@@ -134,7 +134,7 @@
       },
       "allOf": [
         {
-          "$ref": "#/definitions/CConfig"
+          "$ref": "#/definitions/CcConfig_for_CConfigMarker"
         }
       ]
     },
@@ -215,6 +215,9 @@
     },
     "conda": {
       "default": {
+        "detect_env_vars": [
+          "!PIXI_ENVIRONMENT_NAME"
+        ],
         "disabled": false,
         "format": "via [$symbol$environment]($style) ",
         "ignore_base": true,
@@ -238,6 +241,47 @@
       "allOf": [
         {
           "$ref": "#/definitions/ContainerConfig"
+        }
+      ]
+    },
+    "cpp": {
+      "default": {
+        "commands": [
+          [
+            "c++",
+            "--version"
+          ],
+          [
+            "g++",
+            "--version"
+          ],
+          [
+            "clang++",
+            "--version"
+          ]
+        ],
+        "detect_extensions": [
+          "cpp",
+          "cc",
+          "cxx",
+          "c++",
+          "hpp",
+          "hh",
+          "hxx",
+          "h++",
+          "tcc"
+        ],
+        "detect_files": [],
+        "detect_folders": [],
+        "disabled": true,
+        "format": "via [$symbol($version(-$name) )]($style)",
+        "style": "149 bold",
+        "symbol": "C++ ",
+        "version_format": "v${raw}"
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/CcConfig_for_CppConfigMarker"
         }
       ]
     },
@@ -386,6 +430,8 @@
       "default": {
         "detect_extensions": [],
         "detect_files": [
+          "compose.yml",
+          "compose.yaml",
           "docker-compose.yml",
           "docker-compose.yaml",
           "Dockerfile"
@@ -664,7 +710,8 @@
         "style": "red bold",
         "typechanged": "",
         "untracked": "?",
-        "up_to_date": ""
+        "up_to_date": "",
+        "use_git_executable": false
       },
       "allOf": [
         {
@@ -842,6 +889,26 @@
       "allOf": [
         {
           "$ref": "#/definitions/HgBranchConfig"
+        }
+      ]
+    },
+    "hg_state": {
+      "default": {
+        "bisect": "BISECTING",
+        "disabled": true,
+        "format": "\\([$state]($style)\\) ",
+        "graft": "GRAFTING",
+        "histedit": "HISTEDITING",
+        "merge": "MERGING",
+        "rebase": "REBASING",
+        "shelve": "SHELVING",
+        "style": "bold yellow",
+        "transplant": "TRANSPLANTING",
+        "update": "UPDATING"
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/HgStateConfig"
         }
       ]
     },
@@ -1050,6 +1117,31 @@
         }
       ]
     },
+    "mise": {
+      "default": {
+        "detect_extensions": [],
+        "detect_files": [
+          "mise.toml",
+          "mise.local.toml",
+          ".mise.toml",
+          ".mise.local.toml"
+        ],
+        "detect_folders": [
+          ".mise"
+        ],
+        "disabled": true,
+        "format": "[$symbol$health]($style) ",
+        "healthy_symbol": "healthy",
+        "style": "bold purple",
+        "symbol": "mise ",
+        "unhealthy_symbol": "unhealthy"
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/MiseConfig"
+        }
+      ]
+    },
     "mojo": {
       "default": {
         "detect_extensions": [
@@ -1079,6 +1171,19 @@
       "allOf": [
         {
           "$ref": "#/definitions/NatsConfig"
+        }
+      ]
+    },
+    "netns": {
+      "default": {
+        "disabled": false,
+        "format": "[$symbol \\[$name\\]]($style) ",
+        "style": "blue bold dimmed",
+        "symbol": "🛜"
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/NetnsConfig"
         }
       ]
     },
@@ -1135,7 +1240,10 @@
         "detect_files": [
           "package.json",
           ".node-version",
-          ".nvmrc"
+          ".nvmrc",
+          "!bunfig.toml",
+          "!bun.lock",
+          "!bun.lockb"
         ],
         "detect_folders": [
           "node_modules"
@@ -1216,7 +1324,7 @@
         "disabled": false,
         "format": "via [$symbol($version )]($style)",
         "style": "bold blue",
-        "symbol": "🪖  ",
+        "symbol": "🪖 ",
         "version_format": "v${raw}"
       },
       "allOf": [
@@ -1252,6 +1360,7 @@
           "Android": "🤖 ",
           "Arch": "🎗️ ",
           "Artix": "🎗️ ",
+          "Bluefin": "🐟 ",
           "CachyOS": "🎗️ ",
           "CentOS": "💠 ",
           "Debian": "🌀 ",
@@ -1290,7 +1399,7 @@
           "Ultramarine": "🔷 ",
           "Unknown": "❓ ",
           "Uos": "🐲 ",
-          "Void": "  ",
+          "Void": " ",
           "Windows": "🪟 ",
           "openEuler": "🦉 ",
           "openSUSE": "🦎 "
@@ -1383,6 +1492,30 @@
         }
       ]
     },
+    "pixi": {
+      "default": {
+        "detect_extensions": [],
+        "detect_files": [
+          "pixi.toml",
+          "pixi.lock"
+        ],
+        "detect_folders": [],
+        "disabled": false,
+        "format": "via [$symbol($version )(\\($environment\\) )]($style)",
+        "pixi_binary": [
+          "pixi"
+        ],
+        "show_default_environment": true,
+        "style": "yellow bold",
+        "symbol": "🧚 ",
+        "version_format": "v${raw}"
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/PixiConfig"
+        }
+      ]
+    },
     "pulumi": {
       "default": {
         "disabled": false,
@@ -1437,8 +1570,7 @@
           "Pipfile",
           "tox.ini",
           "setup.py",
-          "__init__.py",
-          "pixi.toml"
+          "__init__.py"
         ],
         "detect_folders": [],
         "disabled": false,
@@ -1446,9 +1578,15 @@
         "pyenv_prefix": "pyenv ",
         "pyenv_version_name": false,
         "python_binary": [
-          "python",
-          "python3",
-          "python2"
+          [
+            "python"
+          ],
+          [
+            "python3"
+          ],
+          [
+            "python2"
+          ]
         ],
         "style": "yellow bold",
         "symbol": "🐍 ",
@@ -2248,7 +2386,7 @@
       },
       "additionalProperties": false
     },
-    "CConfig": {
+    "CcConfig_for_CConfigMarker": {
       "type": "object",
       "properties": {
         "format": {
@@ -2530,6 +2668,15 @@
           "default": true,
           "type": "boolean"
         },
+        "detect_env_vars": {
+          "default": [
+            "!PIXI_ENVIRONMENT_NAME"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "disabled": {
           "default": false,
           "type": "boolean"
@@ -2555,6 +2702,86 @@
         "disabled": {
           "default": false,
           "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CcConfig_for_CppConfigMarker": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "default": "via [$symbol($version(-$name) )]($style)",
+          "type": "string"
+        },
+        "version_format": {
+          "default": "v${raw}",
+          "type": "string"
+        },
+        "style": {
+          "default": "149 bold",
+          "type": "string"
+        },
+        "symbol": {
+          "default": "C++ ",
+          "type": "string"
+        },
+        "disabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "detect_extensions": {
+          "default": [
+            "cpp",
+            "cc",
+            "cxx",
+            "c++",
+            "hpp",
+            "hh",
+            "hxx",
+            "h++",
+            "tcc"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detect_files": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detect_folders": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commands": {
+          "default": [
+            [
+              "c++",
+              "--version"
+            ],
+            [
+              "g++",
+              "--version"
+            ],
+            [
+              "clang++",
+              "--version"
+            ]
+          ],
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       },
       "additionalProperties": false
@@ -2956,6 +3183,8 @@
         },
         "detect_files": {
           "default": [
+            "compose.yml",
+            "compose.yaml",
             "docker-compose.yml",
             "docker-compose.yaml",
             "Dockerfile"
@@ -3626,6 +3855,10 @@
           "default": false,
           "type": "boolean"
         },
+        "use_git_executable": {
+          "default": false,
+          "type": "boolean"
+        },
         "windows_starship": {
           "type": [
             "string",
@@ -4010,6 +4243,56 @@
         },
         "truncation_symbol": {
           "default": "…",
+          "type": "string"
+        },
+        "disabled": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "HgStateConfig": {
+      "type": "object",
+      "properties": {
+        "merge": {
+          "default": "MERGING",
+          "type": "string"
+        },
+        "rebase": {
+          "default": "REBASING",
+          "type": "string"
+        },
+        "update": {
+          "default": "UPDATING",
+          "type": "string"
+        },
+        "bisect": {
+          "default": "BISECTING",
+          "type": "string"
+        },
+        "shelve": {
+          "default": "SHELVING",
+          "type": "string"
+        },
+        "graft": {
+          "default": "GRAFTING",
+          "type": "string"
+        },
+        "transplant": {
+          "default": "TRANSPLANTING",
+          "type": "string"
+        },
+        "histedit": {
+          "default": "HISTEDITING",
+          "type": "string"
+        },
+        "style": {
+          "default": "bold yellow",
+          "type": "string"
+        },
+        "format": {
+          "default": "\\([$state]($style)\\) ",
           "type": "string"
         },
         "disabled": {
@@ -4533,6 +4816,64 @@
       },
       "additionalProperties": false
     },
+    "MiseConfig": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "default": "[$symbol$health]($style) ",
+          "type": "string"
+        },
+        "symbol": {
+          "default": "mise ",
+          "type": "string"
+        },
+        "style": {
+          "default": "bold purple",
+          "type": "string"
+        },
+        "disabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "detect_extensions": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detect_files": {
+          "default": [
+            "mise.toml",
+            "mise.local.toml",
+            ".mise.toml",
+            ".mise.local.toml"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detect_folders": {
+          "default": [
+            ".mise"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "healthy_symbol": {
+          "default": "healthy",
+          "type": "string"
+        },
+        "unhealthy_symbol": {
+          "default": "unhealthy",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "MojoConfig": {
       "type": "object",
       "properties": {
@@ -4596,6 +4937,28 @@
         },
         "disabled": {
           "default": true,
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "NetnsConfig": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "default": "[$symbol \\[$name\\]]($style) ",
+          "type": "string"
+        },
+        "symbol": {
+          "default": "🛜",
+          "type": "string"
+        },
+        "style": {
+          "default": "blue bold dimmed",
+          "type": "string"
+        },
+        "disabled": {
+          "default": false,
           "type": "boolean"
         }
       },
@@ -4737,7 +5100,10 @@
           "default": [
             "package.json",
             ".node-version",
-            ".nvmrc"
+            ".nvmrc",
+            "!bunfig.toml",
+            "!bun.lock",
+            "!bun.lockb"
           ],
           "type": "array",
           "items": {
@@ -4887,7 +5253,7 @@
           "type": "string"
         },
         "symbol": {
-          "default": "🪖  ",
+          "default": "🪖 ",
           "type": "string"
         },
         "style": {
@@ -4967,6 +5333,7 @@
             "Android": "🤖 ",
             "Arch": "🎗️ ",
             "Artix": "🎗️ ",
+            "Bluefin": "🐟 ",
             "CachyOS": "🎗️ ",
             "CentOS": "💠 ",
             "Debian": "🌀 ",
@@ -5005,7 +5372,7 @@
             "Ultramarine": "🔷 ",
             "Unknown": "❓ ",
             "Uos": "🐲 ",
-            "Void": "  ",
+            "Void": " ",
             "Windows": "🪟 ",
             "openEuler": "🦉 ",
             "openSUSE": "🦎 "
@@ -5194,6 +5561,83 @@
       },
       "additionalProperties": false
     },
+    "PixiConfig": {
+      "type": "object",
+      "properties": {
+        "pixi_binary": {
+          "default": [
+            "pixi"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/definitions/Either_for_String_and_Array_of_String"
+            }
+          ]
+        },
+        "show_default_environment": {
+          "default": true,
+          "type": "boolean"
+        },
+        "format": {
+          "default": "via [$symbol($version )(\\($environment\\) )]($style)",
+          "type": "string"
+        },
+        "version_format": {
+          "default": "v${raw}",
+          "type": "string"
+        },
+        "symbol": {
+          "default": "🧚 ",
+          "type": "string"
+        },
+        "style": {
+          "default": "yellow bold",
+          "type": "string"
+        },
+        "disabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "detect_extensions": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detect_files": {
+          "default": [
+            "pixi.toml",
+            "pixi.lock"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detect_folders": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Either_for_String_and_Array_of_String": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
     "PulumiConfig": {
       "type": "object",
       "properties": {
@@ -5290,13 +5734,19 @@
         },
         "python_binary": {
           "default": [
-            "python",
-            "python3",
-            "python2"
+            [
+              "python"
+            ],
+            [
+              "python3"
+            ],
+            [
+              "python2"
+            ]
           ],
           "allOf": [
             {
-              "$ref": "#/definitions/Either_for_String_and_Array_of_String"
+              "$ref": "#/definitions/Either_for_Either_for_String_and_Array_of_String_and_Array_of_Either_for_String_and_Array_of_String"
             }
           ]
         },
@@ -5338,8 +5788,7 @@
             "Pipfile",
             "tox.ini",
             "setup.py",
-            "__init__.py",
-            "pixi.toml"
+            "__init__.py"
           ],
           "type": "array",
           "items": {
@@ -5365,15 +5814,15 @@
       },
       "additionalProperties": false
     },
-    "Either_for_String_and_Array_of_String": {
+    "Either_for_Either_for_String_and_Array_of_String_and_Array_of_Either_for_String_and_Array_of_String": {
       "anyOf": [
         {
-          "type": "string"
+          "$ref": "#/definitions/Either_for_String_and_Array_of_String"
         },
         {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/Either_for_String_and_Array_of_String"
           }
         }
       ]

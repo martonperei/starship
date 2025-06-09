@@ -1,4 +1,4 @@
-use indexmap::{indexmap, IndexMap};
+use indexmap::{IndexMap, indexmap};
 use os_info::Type;
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +36,7 @@ impl Default for OSConfig<'_> {
                 Type::Android => "🤖 ",
                 Type::Arch => "🎗️ ",
                 Type::Artix => "🎗️ ",
+                Type::Bluefin => "🐟 ",
                 Type::CachyOS => "🎗️ ",
                 Type::CentOS => "💠 ",
                 Type::Debian => "🌀 ",
@@ -76,7 +77,7 @@ impl Default for OSConfig<'_> {
                 Type::Ultramarine => "🔷 ",
                 Type::Unknown => "❓ ",
                 Type::Uos => "🐲 ",
-                Type::Void => "  ",
+                Type::Void => " ",
                 Type::Windows => "🪟 ",
                 // Future symbols.
                 //aosc =>       " ",
