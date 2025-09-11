@@ -21,7 +21,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     let parsed = StringFormatter::new(config.format).and_then(|formatter| {
         formatter
             .map_meta(|variable, _| match variable {
-                "symbol" => get_symbol(&config, &os.os_type()),
+                "symbol" => get_symbol(&config, os.os_type()),
                 _ => None,
             })
             .map_style(|variable| match variable {
@@ -41,7 +41,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     module.set_segments(match parsed {
         Ok(segments) => segments,
         Err(error) => {
-            log::warn!("Error in module `os`:\n{}", error);
+            log::warn!("Error in module `os`:\n{error}");
             return None;
         }
     });
@@ -51,7 +51,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 
 // Get the operating system symbol from user config, or else default config
 // when user has not defined a symbol for the operating system.
-fn get_symbol<'a>(config: &'a OSConfig, os_type: &os_info::Type) -> Option<&'a str> {
+fn get_symbol<'a>(config: &'a OSConfig, os_type: os_info::Type) -> Option<&'a str> {
     config
         .get_symbol(os_type)
         .or_else(|| OSConfig::default().get_symbol(os_type))
@@ -134,6 +134,7 @@ mod tests {
             (Type::Alpine, Some("🏔️ ")),
             (Type::Amazon, Some("🙂 ")),
             (Type::Android, Some("🤖 ")),
+            (Type::AOSC, Some("🐱 ")),
             (Type::Arch, Some("🎗️ ")),
             (Type::CentOS, Some("💠 ")),
             (Type::Debian, Some("🌀 ")),
@@ -170,7 +171,7 @@ mod tests {
         ];
 
         for (t, e) in type_expected_pairs {
-            assert_eq!(get_symbol(&config, &t), e);
+            assert_eq!(get_symbol(&config, t), e);
         }
     }
 
@@ -181,6 +182,7 @@ mod tests {
             Alpine = " "
             Amazon = " "
             Android = " "
+            AOSC = " "
             Arch = " "
             CentOS = " "
             Debian = " "
@@ -222,6 +224,7 @@ mod tests {
             (Type::Alpine, Some(" ")),
             (Type::Amazon, Some(" ")),
             (Type::Android, Some(" ")),
+            (Type::AOSC, Some(" ")),
             (Type::Arch, Some(" ")),
             (Type::CentOS, Some(" ")),
             (Type::Debian, Some(" ")),
@@ -258,7 +261,7 @@ mod tests {
         ];
 
         for (t, e) in type_expected_pairs {
-            assert_eq!(get_symbol(&config, &t), e);
+            assert_eq!(get_symbol(&config, t), e);
         }
     }
 
@@ -276,6 +279,7 @@ mod tests {
             (Type::Alpine, Some("🏔️ ")),
             (Type::Amazon, Some("🙂 ")),
             (Type::Android, Some("🤖 ")),
+            (Type::AOSC, Some("🐱 ")),
             (Type::Arch, Some("Arch is the best!")),
             (Type::CentOS, Some("💠 ")),
             (Type::Debian, Some("🌀 ")),
@@ -312,7 +316,7 @@ mod tests {
         ];
 
         for (t, e) in type_expected_pairs {
-            assert_eq!(get_symbol(&config, &t), e);
+            assert_eq!(get_symbol(&config, t), e);
         }
     }
 
@@ -336,14 +340,16 @@ mod tests {
             Type::Alpine => "🏔️ ",
             Type::Amazon => "🙂 ",
             Type::Android => "🤖 ",
+            Type::AOSC => "🐱 ",
             Type::Arch | Type::Artix | Type::CachyOS => "🎗️ ",
             Type::Bluefin => "🐟 ",
             Type::CentOS | Type::AlmaLinux | Type::RockyLinux => "💠 ",
+            Type::Cygwin => "",
             Type::Debian => "🌀 ",
             Type::DragonFly => "🐉 ",
             Type::Emscripten => "🔗 ",
             Type::EndeavourOS => "🚀 ",
-            Type::Fedora | Type::Nobara => "🎩 ",
+            Type::Fedora | Type::Nobara | Type::Redhat | Type::RedHatEnterprise => "🎩 ",
             Type::FreeBSD => "😈 ",
             Type::Garuda => "🦅 ",
             Type::Gentoo => "🗜️ ",
@@ -366,8 +372,6 @@ mod tests {
             Type::OracleLinux => "🦴 ",
             Type::Pop => "🍭 ",
             Type::Raspbian => "🍓 ",
-            Type::Redhat => "🎩 ",
-            Type::RedHatEnterprise => "🎩 ",
             Type::Redox => "🧪 ",
             Type::Solus => "⛵ ",
             Type::SUSE => "🦎 ",

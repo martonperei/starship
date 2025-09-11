@@ -17,14 +17,14 @@ pub struct OSConfig<'a> {
 }
 
 impl<'a> OSConfig<'a> {
-    pub fn get_symbol(&self, key: &Type) -> Option<&'a str> {
-        self.symbols.get(key).copied()
+    pub fn get_symbol(&self, key: Type) -> Option<&'a str> {
+        self.symbols.get(&key).copied()
     }
 }
 
 impl Default for OSConfig<'_> {
     fn default() -> Self {
-        OSConfig {
+        Self {
             format: "[$symbol]($style)",
             style: "bold white",
             symbols: indexmap! {
@@ -34,6 +34,7 @@ impl Default for OSConfig<'_> {
                 Type::Alpine => "🏔️ ",
                 Type::Amazon => "🙂 ",
                 Type::Android => "🤖 ",
+                Type::AOSC => "🐱 ",
                 Type::Arch => "🎗️ ",
                 Type::Artix => "🎗️ ",
                 Type::Bluefin => "🐟 ",

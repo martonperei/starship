@@ -146,6 +146,7 @@ AlmaLinux = "alma "
 Alpine = "alp "
 Amazon = "amz "
 Android = "andr "
+AOSC = "aosc "
 Arch = "rch "
 Artix = "atx "
 Bluefin = "blfn "
@@ -254,6 +255,9 @@ symbol = "typst "
 
 [terraform]
 symbol = "terraform "
+
+[xmake]
+symbol = "xmake "
 
 [zig]
 symbol = "zig "

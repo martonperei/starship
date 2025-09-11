@@ -50,7 +50,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     module.set_segments(match parsed {
         Ok(segments) => segments,
         Err(error) => {
-            log::warn!("Error in module `opa`:\n{}", error);
+            log::warn!("Error in module `opa`:\n{error}");
             return None;
         }
     });
@@ -62,10 +62,10 @@ fn get_opa_version(context: &Context) -> Option<String> {
     let version_output: String = context
         .exec_cmd("opa", &["version"])
         .map(get_command_string_output)?;
-    parse_opa_version(version_output)
+    parse_opa_version(&version_output)
 }
 
-fn parse_opa_version(version_output: String) -> Option<String> {
+fn parse_opa_version(version_output: &str) -> Option<String> {
     Some(version_output.split_whitespace().nth(1)?.to_string())
 }
 

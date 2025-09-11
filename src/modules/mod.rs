@@ -97,6 +97,7 @@ mod utils;
 mod vagrant;
 mod vcsh;
 mod vlang;
+mod xmake;
 mod zig;
 
 #[cfg(feature = "battery")]
@@ -107,7 +108,7 @@ mod typst;
 pub use self::battery::{BatteryInfoProvider, BatteryInfoProviderImpl};
 
 use crate::config::ModuleConfig;
-use crate::context::{Context, Shell};
+use crate::context::{Context, Detected, Shell};
 use crate::module::Module;
 use std::time::Instant;
 
@@ -215,6 +216,7 @@ pub fn handle<'a>(module: &str, context: &'a Context) -> Option<Module<'a>> {
             "vlang" => vlang::module(context),
             "vagrant" => vagrant::module(context),
             "vcsh" => vcsh::module(context),
+            "xmake" => xmake::module(context),
             "zig" => zig::module(context),
             env if env.starts_with("env_var.") => {
                 env_var::module(env.strip_prefix("env_var."), context)
@@ -233,7 +235,7 @@ pub fn handle<'a>(module: &str, context: &'a Context) -> Option<Module<'a>> {
     };
 
     let elapsed = start.elapsed();
-    log::trace!("Took {:?} to compute module {:?}", elapsed, module);
+    log::trace!("Took {elapsed:?} to compute module {module:?}");
     if elapsed.as_millis() >= 1 {
         // If we take less than 1ms to compute a None, then we will not return a module at all
         // if we have a module: default duration is 0 so no need to change it
@@ -348,6 +350,7 @@ pub fn description(module: &str) -> &'static str {
         "vagrant" => "The currently installed version of Vagrant",
         "vcsh" => "The currently active VCSH repository",
         "vlang" => "The currently installed version of V",
+        "xmake" => "The currently installed version of XMake",
         "zig" => "The currently installed version of Zig",
         _ => "<no description>",
     }

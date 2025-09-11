@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
     schemars(deny_unknown_fields)
 )]
 #[serde(default)]
-pub struct HaskellConfig<'a> {
+pub struct XMakeConfig<'a> {
     pub format: &'a str,
     pub version_format: &'a str,
     pub symbol: &'a str,
@@ -18,16 +18,16 @@ pub struct HaskellConfig<'a> {
     pub detect_folders: Vec<&'a str>,
 }
 
-impl Default for HaskellConfig<'_> {
+impl Default for XMakeConfig<'_> {
     fn default() -> Self {
         Self {
             format: "via [$symbol($version )]($style)",
             version_format: "v${raw}",
-            symbol: "λ ",
-            style: "bold purple",
+            symbol: "△ ",
+            style: "bold green",
             disabled: false,
-            detect_extensions: vec!["hs", "cabal", "hs-boot"],
-            detect_files: vec!["stack.yaml", "cabal.project"],
+            detect_extensions: vec![],
+            detect_files: vec!["xmake.lua"],
             detect_folders: vec![],
         }
     }
