@@ -1700,10 +1700,11 @@ mod tests {
             .path(dir)
             .collect();
         let expected = Some(format!(
-            "{}{}{}repo{} ",
+            "{}{}{}repo{}{} ",
             Color::Blue.prefix(),
             convert_path_sep("…/above/"),
             Color::Green.prefix(),
+            Color::Blue.prefix(),
             Color::Cyan.bold().paint(convert_path_sep("/src/sub/path"))
         ));
         assert_eq!(expected, actual);
