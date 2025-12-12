@@ -66,7 +66,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 
     let mut is_truncated = dir_string.is_some();
 
-    // the home directory if required.
+    // If no repo path contraction occurred, contract the home directory if required.
     let full_dir_string = dir_string
         .unwrap_or_else(|| contract_path(display_dir, &home_dir, config.home_symbol).to_string());
 
@@ -77,13 +77,13 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     let full_dir_string = substitute_path(full_dir_string, &config.substitutions);
 
     // Truncate the dir string to the maximum number of path components
-    let dir_string =
-        if let Some(truncated) = truncate(&full_dir_string, config.truncation_length as usize) {
-            is_truncated = true;
-            truncated
-        } else {
-            full_dir_string.to_string()
-        };
+    let dir_string = if let Some(truncated) = truncate(&full_dir_string, config.truncation_length as usize) {
+        is_truncated = true;
+        truncated
+    } else {
+        // Clone is necessary here because we need both full_dir_string and dir_string later
+        full_dir_string.clone()
+    };
 
     let prefix = if is_truncated {
         // Substitutions could have changed the prefix, so don't allow them and
@@ -111,7 +111,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 
             if config.fish_style_pwd_dir_length > 0 {
                 let root: &str = repo_path_vec[0];
-                let before = before_root_dir(&full_dir_string, &root);
+                let before = before_root_dir(&full_dir_string, root);
 
                 let before_fish = to_fish_style(
                     config.fish_style_pwd_dir_length as usize,
@@ -290,9 +290,22 @@ fn contract_repo_path(full_path: &Path, top_level_path: &Path) -> Option<String>
     None
 }
 
+/// Resolves symlinks in a path while preserving the logical structure
+///
+/// This function manually resolves symlinks component-by-component, then attempts
+/// to canonicalize the result. This approach preserves logical paths better than
+/// using canonicalize alone, which would return only the physical path.
+///
+/// # Arguments
+/// * `path` - The path to resolve
+///
+/// # Returns
+/// The resolved path, or the original path if canonicalization fails
 fn real_path<P: AsRef<Path>>(path: P) -> PathBuf {
     let path = path.as_ref();
     let mut buf = PathBuf::new();
+    
+    // Manually resolve symlinks component by component
     for component in path.components() {
         let next = buf.join(component);
         if let Ok(realpath) = next.read_link() {
@@ -305,6 +318,8 @@ fn real_path<P: AsRef<Path>>(path: P) -> PathBuf {
             buf = next;
         }
     }
+    
+    // Attempt to canonicalize, falling back to the original path on failure
     buf.canonicalize().unwrap_or_else(|_| path.into())
 }
 
@@ -322,8 +337,8 @@ fn substitute_path(dir_string: String, substitutions: &IndexMap<String, &str>) -
 
 /// Takes part before contracted path and replaces it with fish style path
 ///
-/// Will take the first letter of each directory before the contracted path and
-/// use that in the path instead. See the following example.
+/// Will take the first `pwd_dir_length` graphemes of each directory before the 
+/// contracted path and use that in the path instead. See the following example.
 ///
 /// Absolute Path: `/Users/Bob/Projects/work/a_repo`
 /// Contracted Path: `a_repo`
@@ -332,27 +347,68 @@ fn substitute_path(dir_string: String, substitutions: &IndexMap<String, &str>) -
 /// Absolute Path: `/some/Path/not/in_a/repo/but_nested`
 /// Contracted Path: `in_a/repo/but_nested`
 /// With Fish Style: `/s/P/n/in_a/repo/but_nested`
+///
+/// # Arguments
+/// * `pwd_dir_length` - Number of graphemes to keep from each directory name
+/// * `dir_string` - The full directory path
+/// * `truncated_dir_string` - The part to be removed from the end (must be a suffix of dir_string)
+///
+/// # Note
+/// For dot-prefixed directories (e.g., `.config`), includes the dot plus `pwd_dir_length` 
+/// characters (e.g., with `pwd_dir_length=1`, `.config` becomes `.c`).
 fn to_fish_style(pwd_dir_length: usize, dir_string: &str, truncated_dir_string: &str) -> String {
-    let replaced_dir_string = dir_string.trim_end_matches(truncated_dir_string);
-    let components = replaced_dir_string.split('/').collect::<Vec<&str>>();
+    debug_assert!(
+        dir_string.ends_with(truncated_dir_string),
+        "truncated_dir_string must be a suffix of dir_string"
+    );
 
-    if components.is_empty() {
-        return replaced_dir_string.to_string();
+    let replaced_dir_string = dir_string.trim_end_matches(truncated_dir_string);
+    
+    // Quick exit to avoid allocation for empty string
+    if replaced_dir_string.is_empty() {
+        return String::new();
     }
 
-    components
-        .into_iter()
-        .map(|word| -> String {
-            let chars = UnicodeSegmentation::graphemes(word, true).collect::<Vec<&str>>();
-            match word {
-                "" => String::new(),
-                _ if chars.len() <= pwd_dir_length => word.to_string(),
-                _ if word.starts_with('.') => chars[..=pwd_dir_length].join(""),
-                _ => chars[..pwd_dir_length].join(""),
+    let components = replaced_dir_string.split('/');
+    let mut result = String::with_capacity(replaced_dir_string.len());
+
+    for (idx, word) in components.enumerate() {
+        if idx > 0 {
+            result.push('/');
+        }
+
+        if word.is_empty() {
+            continue;
+        }
+
+        let mut graphemes = word.graphemes(true);
+        
+        // Peek at the first grapheme to check for dotfiles
+        if let Some(first) = graphemes.next() {
+            let is_dot = first == ".";
+            let take_count = if is_dot { pwd_dir_length + 1 } else { pwd_dir_length };
+            
+            // We need to know if the word is short enough to fit fully.
+            // We count the remaining graphemes (we already took 1).
+            let remaining_count = graphemes.clone().count();
+            let total_count = remaining_count + 1;
+
+            if total_count <= pwd_dir_length {
+                // Word is short: append the whole thing
+                result.push_str(word);
+            } else {
+                // Word is long: append the first char (already popped)
+                result.push_str(first);
+                // Append the rest of the limit
+                // Note: take() uses usize, if take_count is 1 we need 0 more items
+                for g in graphemes.take(take_count - 1) {
+                    result.push_str(g);
+                }
             }
-        })
-        .collect::<Vec<_>>()
-        .join("/")
+        }
+    }
+    
+    result
 }
 
 /// Convert the path separators in `path` to the OS specific path separators.
@@ -360,10 +416,28 @@ fn convert_path_sep(path: &str) -> String {
     PathBuf::from_slash(path).to_string_lossy().into_owned()
 }
 
-/// Get the path before the git repo root by trim the most right repo name.
-fn before_root_dir<'a>(path: &'a str, repo: &'a str) -> &'a str {
-    match path.rsplit_once(repo) {
-        Some((a, _)) => a,
+/// Extracts the path portion before a repository root directory
+///
+/// Finds the rightmost occurrence of the repository name in the path and returns
+/// everything before it. This is useful for separating the path into "before repo"
+/// and "repo + after" sections.
+///
+/// # Arguments
+/// * `path` - The full path string
+/// * `repo_name` - The repository directory name to search for
+///
+/// # Returns
+/// The portion of the path before the repository name, or the full path if not found
+///
+/// # Examples
+/// ```
+/// before_root_dir("~/user/gitrepo/gitrepo", "gitrepo") => "~/user/gitrepo/"
+/// before_root_dir("~/projects/myrepo/src", "myrepo") => "~/projects/"
+/// before_root_dir("~/projects/src", "notfound") => "~/projects/src"
+/// ```
+fn before_root_dir<'a>(path: &'a str, repo_name: &'a str) -> &'a str {
+    match path.rsplit_once(repo_name) {
+        Some((before, _)) => before,
         None => path,
     }
 }
