@@ -2,6 +2,33 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Configuration for git repository discovery and config loading.
+/// These settings affect performance vs compatibility tradeoffs.
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(
+    feature = "config-schema",
+    derive(schemars::JsonSchema),
+    schemars(deny_unknown_fields)
+)]
+#[serde(default)]
+pub struct GitConfig {
+    /// Load configuration embedded in the git binary.
+    /// Enabled by default for compatibility. Disable for ~6ms speedup.
+    pub load_git_binary_config: bool,
+    /// Load system-level git configuration (/etc/gitconfig).
+    /// Enabled by default for compatibility. Disable for slight speedup.
+    pub load_system_config: bool,
+}
+
+impl Default for GitConfig {
+    fn default() -> Self {
+        Self {
+            load_git_binary_config: true,
+            load_system_config: true,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[cfg_attr(
     feature = "config-schema",
@@ -23,6 +50,8 @@ pub struct StarshipRootConfig {
     pub palette: Option<String>,
     pub palettes: HashMap<String, Palette>,
     pub profiles: IndexMap<String, String>,
+    /// Git repository discovery and config loading settings.
+    pub git_config: GitConfig,
 }
 
 pub type Palette = HashMap<String, String>;
@@ -152,6 +181,7 @@ impl Default for StarshipRootConfig {
             follow_symlinks: true,
             palette: None,
             palettes: HashMap::default(),
+            git_config: GitConfig::default(),
         }
     }
 }

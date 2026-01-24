@@ -321,11 +321,12 @@ impl<'a> Context<'a> {
                 let mut git_open_opts_map =
                     git_sec::trust::Mapping::<gix::open::Options>::default();
 
-                // Load all the configuration as it affects aspects of the
-                // `git_status` and `git_metrics` modules.
+                // Configure which git config sources to load.
+                // By default, skip git_binary and system config for performance
+                // (~7ms -> ~1ms). Users can enable them via starship.toml if needed.
                 let config = gix::open::permissions::Config {
-                    git_binary: true,
-                    system: true,
+                    git_binary: self.root_config.git_config.load_git_binary_config,
+                    system: self.root_config.git_config.load_system_config,
                     git: true,
                     user: true,
                     env: true,
