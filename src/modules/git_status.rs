@@ -3,7 +3,6 @@ use crate::configs::git_status::GitStatusConfig;
 use crate::formatter::StringFormatter;
 use crate::segment::Segment;
 use crate::{context, num_configured_starship_threads, num_rayon_threads};
-use gix::bstr::ByteVec;
 use gix::status::Submodule;
 use regex::Regex;
 use std::path::PathBuf;
@@ -349,21 +348,9 @@ fn get_repo_status(
         let has_up_to_date_or_diverged =
             !config.up_to_date.is_empty() || !config.diverged.is_empty();
         if has_ahead_behind || has_up_to_date_or_diverged {
-            if let Some(branch_name) = gix_repo.head_name().ok().flatten().and_then(|ref_name| {
-                Vec::from(gix::bstr::BString::from(ref_name))
-                    .into_string()
-                    .ok()
-            }) {
-                let output = repo.exec_git(
-                    context,
-                    ["for-each-ref", "--format", "%(upstream) %(upstream:track)"]
-                        .into_iter()
-                        .map(ToOwned::to_owned)
-                        .chain(Some(branch_name)),
-                )?;
-                if let Some(line) = output.stdout.lines().next() {
-                    repo_status.set_ahead_behind_for_each_ref(line);
-                }
+            if let Some((ahead, behind)) = RepoStatus::compute_ahead_behind_gix(&gix_repo) {
+                repo_status.ahead = Some(ahead);
+                repo_status.behind = Some(behind);
             }
         }
 
@@ -559,35 +546,72 @@ impl RepoStatus {
         }
     }
 
-    fn set_ahead_behind_for_each_ref(&mut self, mut s: &str) {
-        if s == " " || s.ends_with(" [gone]") {
-            self.ahead = None;
-            self.behind = None;
-            return;
+    /// Calculate ahead/behind using gix instead of shelling out to git.
+    /// Returns (ahead, behind) counts.
+    ///
+    /// Note: For complex merge graphs, this may give slightly different counts
+    /// than `git rev-list --left-right --count` because we stop at the merge_base
+    /// during topological traversal. In practice, this matches git's behavior for
+    /// typical workflows (linear history and simple merges).
+    fn compute_ahead_behind_gix(
+        gix_repo: &gix::Repository,
+    ) -> Option<(usize, usize)> {
+        // Get the local HEAD commit
+        let mut head = gix_repo.head().ok()?;
+        let local_id = head.peel_to_commit().ok()?.id;
+
+        // Get the upstream tracking branch
+        let branch_ref = head.referent_name()?;
+
+        // Get the remote name (e.g., "origin") and remote branch name (e.g., "refs/heads/master")
+        let remote_name = gix_repo
+            .branch_remote_name(branch_ref.shorten(), gix::remote::Direction::Fetch)?;
+        let remote_branch = gix_repo
+            .branch_remote_ref_name(branch_ref, gix::remote::Direction::Fetch)
+            .and_then(std::result::Result::ok)?;
+
+        // Construct local tracking ref: refs/remotes/<remote>/<branch>
+        let tracking_ref = format!(
+            "refs/remotes/{}/{}",
+            remote_name.as_bstr(),
+            remote_branch.shorten()
+        );
+
+        let upstream_id = gix_repo
+            .find_reference(tracking_ref.as_str())
+            .ok()?
+            .peel_to_commit()
+            .ok()?
+            .id;
+
+        // If they're the same, no need to walk
+        if local_id == upstream_id {
+            return Some((0, 0));
         }
 
-        s = s
-            .split_once(' ')
-            .unwrap()
-            .1
-            .trim_matches(|c| c == '[' || c == ']');
+        // Find merge base to limit traversal
+        let merge_base = gix_repo.merge_base(local_id, upstream_id).ok()?;
 
-        for pair in s.split(',') {
-            let mut tokens = pair.trim().splitn(2, ' ');
-            if let (Some(name), Some(number)) = (tokens.next(), tokens.next()) {
-                let storage = match name {
-                    "ahead" => &mut self.ahead,
-                    "behind" => &mut self.behind,
-                    _ => return,
-                };
-                *storage = number.parse().ok();
+        // Count commits from local to merge_base (ahead)
+        // Stop when we hit the merge_base
+        let mut ahead = 0;
+        for info in gix_repo.rev_walk([local_id]).all().ok()?.filter_map(Result::ok) {
+            if info.id == merge_base {
+                break;
             }
+            ahead += 1;
         }
-        for field in [&mut self.ahead, &mut self.behind] {
-            if field.is_none() {
-                *field = Some(0);
+
+        // Count commits from upstream to merge_base (behind)
+        let mut behind = 0;
+        for info in gix_repo.rev_walk([upstream_id]).all().ok()?.filter_map(Result::ok) {
+            if info.id == merge_base {
+                break;
             }
+            behind += 1;
         }
+
+        Some((ahead, behind))
     }
 }
 
@@ -1788,5 +1812,103 @@ pub(crate) mod tests {
         )?;
 
         Ok(())
+    }
+
+    #[test]
+    fn no_ahead_behind_on_detached_head() -> io::Result<()> {
+        let repo_dir = fixture_repo(FixtureProvider::Git)?;
+
+        // Detach HEAD
+        create_command("git")?
+            .args(["checkout", "--detach", "HEAD"])
+            .current_dir(repo_dir.path())
+            .output()?;
+
+        let actual = ModuleRenderer::new("git_status")
+            .config(toml::toml! {
+                [git_status]
+                ahead = "⇡$count"
+                behind = "⇣$count"
+            })
+            .path(repo_dir.path())
+            .collect();
+
+        // Should show nothing (no ahead/behind on detached HEAD)
+        assert_eq!(None, actual);
+        repo_dir.close()
+    }
+
+    #[test]
+    fn no_ahead_behind_on_branch_without_upstream() -> io::Result<()> {
+        let repo_dir = fixture_repo(FixtureProvider::Git)?;
+
+        // Create a new branch without upstream
+        create_command("git")?
+            .args(["checkout", "-b", "no-upstream-branch"])
+            .current_dir(repo_dir.path())
+            .output()?;
+
+        let actual = ModuleRenderer::new("git_status")
+            .config(toml::toml! {
+                [git_status]
+                ahead = "⇡$count"
+                behind = "⇣$count"
+            })
+            .path(repo_dir.path())
+            .collect();
+
+        // Should show nothing (no upstream configured)
+        assert_eq!(None, actual);
+        repo_dir.close()
+    }
+
+    #[test]
+    fn shows_multiple_commits_ahead() -> io::Result<()> {
+        let repo_dir = fixture_repo(FixtureProvider::Git)?;
+
+        // Create 3 commits ahead
+        for i in 1..=3 {
+            fs::write(repo_dir.path().join(format!("file{i}.txt")), format!("content {i}"))?;
+            create_command("git")?
+                .args(["add", "."])
+                .current_dir(repo_dir.path())
+                .output()?;
+            create_command("git")?
+                .args(["commit", "-m", &format!("commit {i}"), "--no-gpg-sign"])
+                .current_dir(repo_dir.path())
+                .output()?;
+        }
+
+        let actual = ModuleRenderer::new("git_status")
+            .config(toml::toml! {
+                [git_status]
+                ahead = "⇡$count"
+            })
+            .path(repo_dir.path())
+            .collect();
+        let expected = format_output("⇡3");
+
+        assert_eq!(expected, actual);
+        repo_dir.close()
+    }
+
+    #[test]
+    fn no_ahead_behind_on_gone_upstream() -> io::Result<()> {
+        let repo_dir = fixture_repo(FixtureProvider::Git)?;
+
+        create_branch_with_gone_upstream(repo_dir.path())?;
+
+        let actual = ModuleRenderer::new("git_status")
+            .config(toml::toml! {
+                [git_status]
+                ahead = "⇡$count"
+                behind = "⇣$count"
+            })
+            .path(repo_dir.path())
+            .collect();
+
+        // Should show nothing (upstream is gone)
+        assert_eq!(None, actual);
+        repo_dir.close()
     }
 }

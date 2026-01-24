@@ -459,7 +459,7 @@ fn convert_path_sep(path: &str) -> String {
 /// The portion of the path before the repository name, or the full path if not found
 ///
 /// # Examples
-/// ```
+/// ```text
 /// before_root_dir("~/user/gitrepo/gitrepo", "gitrepo") => "~/user/gitrepo/"
 /// before_root_dir("~/projects/myrepo/src", "myrepo") => "~/projects/"
 /// before_root_dir("~/projects/src", "notfound") => "~/projects/src"
