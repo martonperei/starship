@@ -56,19 +56,25 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     } else {
         None
     };
+    // Contract home directory in the display path (used for fish-style prefix)
+    let full_path_with_home = contract_path(display_dir, &home_dir, config.home_symbol);
+
+    // Get contracted repo path and repo name if in a repo
+    let repo_contract = repo
+        .and_then(|r| r.workdir.as_ref())
+        .filter(|&root| root != &home_dir)
+        .and_then(|root| contract_repo_path(display_dir, root));
+
     let dir_string = if config.truncate_to_repo {
-        repo.and_then(|r| r.workdir.as_ref())
-            .filter(|&root| root != &home_dir)
-            .and_then(|root| contract_repo_path(display_dir, root))
+        repo_contract.clone()
     } else {
         None
     };
 
     let mut is_truncated = dir_string.is_some();
 
-    // If no repo path contraction occurred, contract the home directory if required.
-    let full_dir_string = dir_string
-        .unwrap_or_else(|| contract_path(display_dir, &home_dir, config.home_symbol).to_string());
+    // If no repo path contraction occurred, use the home-contracted path
+    let full_dir_string = dir_string.unwrap_or_else(|| full_path_with_home.to_string());
 
     #[cfg(windows)]
     let full_dir_string = remove_extended_path_prefix(full_dir_string);
@@ -81,20 +87,27 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
         is_truncated = true;
         truncated
     } else {
-        // Clone is necessary here because we need both full_dir_string and dir_string later
         full_dir_string.clone()
     };
 
+    // Compute fish-style prefix if needed
+    let fish_style_len = config.fish_style_pwd_dir_length as usize;
+    let use_fish_style = fish_style_len > 0 && config.substitutions.is_empty();
+
     let prefix = if is_truncated {
-        // Substitutions could have changed the prefix, so don't allow them and
-        // fish-style path contraction together
-        if config.fish_style_pwd_dir_length > 0 && config.substitutions.is_empty() {
-            // If user is using fish style path, we need to add the segment first
-            to_fish_style(
-                config.fish_style_pwd_dir_length as usize,
-                &full_dir_string,
-                &dir_string
-            )
+        if use_fish_style {
+            // When truncate_to_repo is active, fish-style the path BEFORE the repo
+            if config.truncate_to_repo {
+                if let Some(ref contracted) = repo_contract {
+                    let repo_name = contracted.split('/').next().unwrap_or("");
+                    let before_repo = before_root_dir(&full_path_with_home, repo_name);
+                    to_fish_style(fish_style_len, before_repo, "")
+                } else {
+                    to_fish_style(fish_style_len, &full_dir_string, &dir_string)
+                }
+            } else {
+                to_fish_style(fish_style_len, &full_dir_string, &dir_string)
+            }
         } else {
             String::from(config.truncation_symbol)
         }
@@ -102,40 +115,27 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
         String::new()
     };
 
-    let path_vec = match &repo.and_then(|r| r.workdir.as_ref()) {
-        Some(repo_root) if config.repo_root_style.is_some() => {
-            let contracted_path = contract_repo_path(display_dir, repo_root)?;
-            let repo_path_vec: Vec<&str> = contracted_path.split('/').collect();
-            let after_repo_root = contracted_path.replacen(repo_path_vec[0], "", 1);
+    let path_vec = match repo_contract {
+        Some(ref contracted_path) if config.repo_root_style.is_some() => {
+            let repo_name = contracted_path.split('/').next().unwrap_or("");
+            let after_repo_root = contracted_path.replacen(repo_name, "", 1);
             let num_segments_after_root = after_repo_root.split('/').count();
 
-            if config.fish_style_pwd_dir_length > 0 {
-                let root: &str = repo_path_vec[0];
-                let before = before_root_dir(&full_dir_string, root);
-
-                let before_fish = to_fish_style(
-                    config.fish_style_pwd_dir_length as usize,
-                    before,
-                    "",
-                );
+            if use_fish_style {
+                let before_repo = before_root_dir(&full_path_with_home, repo_name);
+                let before_fish = to_fish_style(fish_style_len, before_repo, "");
 
                 if let Some(truncated) = truncate(&after_repo_root, config.truncation_length as usize) {
-                    let after_fish = to_fish_style(
-                        config.fish_style_pwd_dir_length as usize,
-                        &after_repo_root,
-                        &truncated,
-                    );
-
-                    [before_fish, root.to_string(), after_fish, truncated]
+                    let after_fish = to_fish_style(fish_style_len, &after_repo_root, &truncated);
+                    [before_fish, repo_name.to_string(), after_fish, truncated]
                 } else {
-                    [before_fish, root.to_string(), String::new(), after_repo_root]
+                    [before_fish, repo_name.to_string(), String::new(), after_repo_root]
                 }
             } else if config.truncation_length == 0
                 || ((num_segments_after_root - 1) as i64) < config.truncation_length
             {
-                let root = repo_path_vec[0];
-                let before = before_root_dir(&dir_string, &contracted_path);
-                [prefix + before, root.to_string(), String::new(), after_repo_root]
+                let before = before_root_dir(&dir_string, repo_name);
+                [prefix + before, repo_name.to_string(), String::new(), after_repo_root]
             } else {
                 [String::new(), String::new(), String::new(), prefix + dir_string.as_str()]
             }
@@ -1129,11 +1129,14 @@ mod tests {
             })
             .path(dir)
             .collect();
+        // Store the path string to avoid lifetime issues with to_slash_lossy()
+        let before_repo_path = tmp_dir.path().join("above-repo").to_slash_lossy().to_string() + "/";
+        let fish_prefix = to_fish_style(1, &before_repo_path, "");
         let expected = Some(format!(
             "{} ",
             Color::Cyan.bold().paint(convert_path_sep(&format!(
-                "{}/rocket-controls/src/meters/fuel-gauge",
-                to_fish_style(1, &tmp_dir.path().join("above-repo").to_slash_lossy(), "")
+                "{}rocket-controls/src/meters/fuel-gauge",
+                fish_prefix
             )))
         ));
 
@@ -1341,11 +1344,14 @@ mod tests {
             })
             .path(symlink_src_dir)
             .collect();
+        // Store the path string to avoid lifetime issues with to_slash_lossy()
+        let before_repo_path = tmp_dir.path().join("above-repo").to_slash_lossy().to_string() + "/";
+        let fish_prefix = to_fish_style(1, &before_repo_path, "");
         let expected = Some(format!(
             "{} ",
             Color::Cyan.bold().paint(convert_path_sep(&format!(
-                "{}/rocket-controls-symlink/src/meters/fuel-gauge",
-                to_fish_style(1, &tmp_dir.path().join("above-repo").to_slash_lossy(), "")
+                "{}rocket-controls-symlink/src/meters/fuel-gauge",
+                fish_prefix
             )))
         ));
 
@@ -1895,5 +1901,177 @@ mod tests {
             before_root_dir("~/user/gitrepo-diff/gitrepo", "aaa"),
             "~/user/gitrepo-diff/gitrepo".to_string()
         );
+    }
+
+    #[test]
+    fn to_fish_style_empty_truncated() {
+        // When truncated_dir_string is empty, fish-style the entire path
+        let path = "~/projects/myrepo";
+        let output = to_fish_style(1, path, "");
+        assert_eq!(output, "~/p/m");
+    }
+
+    #[test]
+    fn to_fish_style_with_leading_slash() {
+        // Path starting with / should preserve the leading slash
+        let path = "/src/deep/nested";
+        let output = to_fish_style(1, path, "nested");
+        assert_eq!(output, "/s/d/");
+    }
+
+    #[test]
+    fn to_fish_style_single_component() {
+        let path = "myrepo";
+        let output = to_fish_style(1, path, "");
+        assert_eq!(output, "m");
+    }
+
+    #[test]
+    fn to_fish_style_preserves_short_names() {
+        // Names shorter than or equal to pwd_dir_length should be kept whole
+        let path = "~/a/bb/ccc/dddd";
+        let output = to_fish_style(2, path, "dddd");
+        assert_eq!(output, "~/a/bb/cc/");
+    }
+
+    #[test]
+    #[ignore]
+    fn fish_style_with_repo_root_highlight() -> io::Result<()> {
+        let (tmp_dir, _) = make_known_tempdir(Path::new("/tmp"))?;
+        let repo_dir = tmp_dir.path().join("above").join("repo");
+        let dir = repo_dir.join("src/sub");
+        fs::create_dir_all(&dir)?;
+        init_repo(&repo_dir)?;
+
+        let actual = ModuleRenderer::new("directory")
+            .config(toml::toml! {
+                [directory]
+                truncation_length = 5
+                truncate_to_repo = true
+                fish_style_pwd_dir_length = 1
+                repo_root_style = "green"
+                before_repo_root_style = "blue"
+            })
+            .path(&dir)
+            .collect();
+
+        // Verify the output contains expected components
+        let actual_str = actual.as_ref().unwrap();
+        // Should contain fish-styled prefix ending with /a/ (for "above")
+        assert!(actual_str.contains("/a/"), "should have fish-styled 'above' as /a/");
+        // Should contain the repo name
+        assert!(actual_str.contains("repo"), "should contain repo name");
+        // Should contain the path after repo
+        assert!(actual_str.contains("/src/sub"), "should contain path after repo");
+        // Should have green color code for repo (32m)
+        assert!(actual_str.contains("\x1b[32m"), "should have green color for repo");
+        // Should have blue color code for before_repo (34m)
+        assert!(actual_str.contains("\x1b[34m"), "should have blue color for before_repo");
+
+        tmp_dir.close()
+    }
+
+    #[test]
+    #[ignore]
+    fn fish_style_with_repo_root_and_truncation_after() -> io::Result<()> {
+        let (tmp_dir, _) = make_known_tempdir(Path::new("/tmp"))?;
+        let repo_dir = tmp_dir.path().join("projects").join("myrepo");
+        let dir = repo_dir.join("src/components/deep/nested/path");
+        fs::create_dir_all(&dir)?;
+        init_repo(&repo_dir)?;
+
+        let actual = ModuleRenderer::new("directory")
+            .config(toml::toml! {
+                [directory]
+                truncation_length = 2
+                truncate_to_repo = true
+                fish_style_pwd_dir_length = 1
+                repo_root_style = "green"
+                before_repo_root_style = "blue"
+            })
+            .path(&dir)
+            .collect();
+
+        // Verify the output contains expected components
+        let actual_str = actual.as_ref().unwrap();
+        // Should contain fish-styled prefix ending with /p/ (for "projects")
+        assert!(actual_str.contains("/p/"), "should have fish-styled 'projects' as /p/");
+        // Should contain the repo name
+        assert!(actual_str.contains("myrepo"), "should contain repo name");
+        // Should contain fish-styled after_root: /s/c/d/ for src/components/deep/
+        assert!(actual_str.contains("/s/c/d/"), "should have fish-styled path after repo");
+        // Should contain the truncated path (last 2 components)
+        assert!(actual_str.contains("nested/path"), "should contain truncated path");
+
+        tmp_dir.close()
+    }
+
+    #[test]
+    #[ignore]
+    fn fish_style_repo_root_no_truncation_needed() -> io::Result<()> {
+        let (tmp_dir, _) = make_known_tempdir(Path::new("/tmp"))?;
+        let repo_dir = tmp_dir.path().join("dev").join("repo");
+        let dir = repo_dir.join("src");
+        fs::create_dir_all(&dir)?;
+        init_repo(&repo_dir)?;
+
+        let actual = ModuleRenderer::new("directory")
+            .config(toml::toml! {
+                [directory]
+                truncation_length = 10
+                truncate_to_repo = true
+                fish_style_pwd_dir_length = 1
+                repo_root_style = "green"
+                before_repo_root_style = "blue"
+            })
+            .path(&dir)
+            .collect();
+
+        // Verify the output contains expected components
+        let actual_str = actual.as_ref().unwrap();
+        // Should contain fish-styled prefix ending with /d/ (for "dev")
+        assert!(actual_str.contains("/d/"), "should have fish-styled 'dev' as /d/");
+        // Should contain the repo name
+        assert!(actual_str.contains("repo"), "should contain repo name");
+        // Should contain the full path after repo (no truncation needed)
+        assert!(actual_str.contains("/src"), "should contain path after repo");
+        // Should have green color code for repo
+        assert!(actual_str.contains("\x1b[32m"), "should have green color for repo");
+
+        tmp_dir.close()
+    }
+
+    #[test]
+    #[ignore]
+    fn fish_style_repo_root_dotfile_directories() -> io::Result<()> {
+        let (tmp_dir, _) = make_known_tempdir(Path::new("/tmp"))?;
+        let repo_dir = tmp_dir.path().join(".hidden").join("repo");
+        let dir = repo_dir.join("src");
+        fs::create_dir_all(&dir)?;
+        init_repo(&repo_dir)?;
+
+        let actual = ModuleRenderer::new("directory")
+            .config(toml::toml! {
+                [directory]
+                truncation_length = 5
+                truncate_to_repo = true
+                fish_style_pwd_dir_length = 1
+                repo_root_style = "green"
+            })
+            .path(&dir)
+            .collect();
+
+        // Verify the output contains expected components
+        let actual_str = actual.as_ref().unwrap();
+        // Should contain fish-styled dotfile: .hidden -> .h (dot + 1 char)
+        assert!(actual_str.contains(".h/"), "should have fish-styled '.hidden' as .h/");
+        // Should contain the repo name
+        assert!(actual_str.contains("repo"), "should contain repo name");
+        // Should contain the path after repo
+        assert!(actual_str.contains("/src"), "should contain path after repo");
+        // Should have green color code for repo
+        assert!(actual_str.contains("\x1b[32m"), "should have green color for repo");
+
+        tmp_dir.close()
     }
 }
