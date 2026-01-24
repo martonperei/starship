@@ -49,21 +49,19 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     log::debug!("Physical dir: {:?}", &physical_dir);
     log::debug!("Display dir: {:?}", &display_dir);
 
-    // Attempt repository path contraction (if we are in a git repository)
-    // Otherwise use the logical path, automatically contracting
-    let repo = if config.truncate_to_repo || config.repo_root_style.is_some() {
-        context.get_repo().ok()
-    } else {
-        None
-    };
     // Contract home directory in the display path (used for fish-style prefix)
     let full_path_with_home = contract_path(display_dir, &home_dir, config.home_symbol);
 
     // Get contracted repo path and repo name if in a repo
-    let repo_contract = repo
-        .and_then(|r| r.workdir.as_ref())
-        .filter(|&root| root != &home_dir)
-        .and_then(|root| contract_repo_path(display_dir, root));
+    // Uses lightweight git workdir lookup (no gix overhead)
+    let repo_contract = if config.truncate_to_repo || config.repo_root_style.is_some() {
+        context
+            .get_git_workdir()
+            .filter(|&root| root != &home_dir)
+            .and_then(|root| contract_repo_path(display_dir, root))
+    } else {
+        None
+    };
 
     let dir_string = if config.truncate_to_repo {
         repo_contract.clone()
@@ -260,10 +258,14 @@ fn contract_path<'a>(
 /// Replaces the `top_level_path` in a given `full_path` with the provided
 /// `top_level_replacement` by walking ancestors and comparing its real path.
 fn contract_repo_path(full_path: &Path, top_level_path: &Path) -> Option<String> {
+    // Fast path: try direct prefix matching first (no syscalls)
+    // This works when there are no symlinks involved
+    if let Some(result) = contract_repo_path_fast(full_path, top_level_path) {
+        return Some(result);
+    }
+
+    // Slow path: resolve symlinks and compare real paths
     let top_level_real_path = real_path(top_level_path);
-    // Walk ancestors to preserve logical path in `full_path`.
-    // If we'd just `full_real_path.strip_prefix(top_level_real_path)`,
-    // then it wouldn't preserve logical path. It would've returned physical path.
     for (i, ancestor) in full_path.ancestors().enumerate() {
         let ancestor_real_path = real_path(ancestor);
         if ancestor_real_path != top_level_real_path {
@@ -288,6 +290,33 @@ fn contract_repo_path(full_path: &Path, top_level_path: &Path) -> Option<String>
         ));
     }
     None
+}
+
+/// Fast path for contract_repo_path: simple prefix matching without syscalls
+fn contract_repo_path_fast(full_path: &Path, top_level_path: &Path) -> Option<String> {
+    // Check if full_path starts with top_level_path using normalized comparison
+    if !full_path.normalised_starts_with(top_level_path) {
+        return None;
+    }
+
+    // Get the repo directory name
+    let repo_name = top_level_path.file_name()?.to_string_lossy();
+
+    // Get the path after the repo root
+    let after_repo = full_path
+        .without_prefix()
+        .strip_prefix(top_level_path.without_prefix())
+        .ok()?;
+
+    if after_repo.as_os_str().is_empty() {
+        Some(repo_name.to_string())
+    } else {
+        Some(format!(
+            "{repo_name}/{path}",
+            repo_name = repo_name,
+            path = after_repo.to_slash_lossy()
+        ))
+    }
 }
 
 /// Resolves symlinks in a path while preserving the logical structure

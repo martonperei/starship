@@ -54,6 +54,9 @@ pub struct Context<'a> {
     /// Private field to store Git information for modules who need it
     repo: OnceLock<Result<Repo, Box<gix::discover::Error>>>,
 
+    /// Lightweight cache for just the git workdir path (no gix overhead)
+    git_workdir: OnceLock<Option<PathBuf>>,
+
     /// The shell the user is assumed to be running
     pub shell: Shell,
 
@@ -170,6 +173,7 @@ impl<'a> Context<'a> {
             logical_dir,
             dir_contents: OnceLock::new(),
             repo: OnceLock::new(),
+            git_workdir: OnceLock::new(),
             shell,
             target,
             width,
@@ -386,6 +390,52 @@ impl<'a> Context<'a> {
             })
             .as_ref()
             .map_err(std::convert::AsRef::as_ref)
+    }
+
+    /// Lightweight git workdir lookup - walks up directories looking for `.git`
+    /// without using gix or loading any git configuration.
+    /// Respects GIT_WORK_TREE and GIT_DIR environment variables.
+    /// Returns None if not in a git repository.
+    pub fn get_git_workdir(&self) -> Option<&PathBuf> {
+        // If get_repo() was already called, reuse its result
+        if let Some(Ok(repo)) = self.repo.get() {
+            return repo.workdir.as_ref();
+        }
+
+        self.git_workdir
+            .get_or_init(|| {
+                // Respect GIT_WORK_TREE if set
+                if let Some(work_tree) = self.get_env("GIT_WORK_TREE") {
+                    let path = PathBuf::from(work_tree);
+                    if path.exists() {
+                        return Some(path);
+                    }
+                }
+
+                // If GIT_DIR is set, derive workdir from it (parent of .git)
+                if let Some(git_dir) = self.get_env("GIT_DIR") {
+                    let git_path = PathBuf::from(git_dir);
+                    if git_path.exists() {
+                        // For typical repos, workdir is parent of .git
+                        // For bare repos or unusual setups, this may not apply
+                        return git_path.parent().map(PathBuf::from);
+                    }
+                }
+
+                // Standard discovery: walk up looking for .git
+                if !self.current_dir.exists() {
+                    return None;
+                }
+                let mut current = self.current_dir.as_path();
+                loop {
+                    let git_dir = current.join(".git");
+                    if git_dir.exists() {
+                        return Some(current.to_path_buf());
+                    }
+                    current = current.parent()?;
+                }
+            })
+            .as_ref()
     }
 
     pub fn dir_contents(&self) -> Result<&DirContents, &std::io::Error> {
